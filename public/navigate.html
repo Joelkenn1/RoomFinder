@@ -10,12 +10,15 @@
 
   <script>
     const video = document.getElementById('camera');
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+    navigator.mediaDevices.getUserMedia({ video: true })
       .then(stream => {
+        const video = document.getElementById('camera');
         video.srcObject = stream;
+        video.play();
       })
       .catch(err => {
-        alert("Camera access failed. Please use HTTPS and allow permissions.");
+        console.error('Camera error:', err.name, err.message);
+        alert("Camera access failed: " + err.name);
       });
 
     // Simulate arrival
