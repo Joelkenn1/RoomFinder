@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Navigation</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <video id="camera" autoplay playsinline></video>
+  <div id="arrivalPrompt">You've arrived at your destination!</div>
+
+  <script>
+    const video = document.getElementById('camera');
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+      .then(stream => {
+        video.srcObject = stream;
+      })
+      .catch(err => {
+        alert("Camera access failed. Please use HTTPS and allow permissions.");
+      });
+
+    // Simulate arrival
+    setTimeout(() => {
+      document.getElementById('arrivalPrompt').style.display = 'block';
+    }, 10000);
+  </script>
+</body>
+</html>
