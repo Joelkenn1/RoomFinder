@@ -39,16 +39,34 @@
       border-radius: 8px;
       z-index: 20;
     }
+    #flipButton {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      z-index: 20;
+      padding: 10px 15px;
+      font-size: 14px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    #flipButton:hover {
+      background-color: #0056b3;
+    }
   </style>
 </head>
 <body>
   <video id="camera" autoplay playsinline></video>
   <img id="arrow" src="arrow.png" alt="Arrow">
   <div id="arrivalPrompt">You've arrived at your classroom!</div>
+  <button id="flipButton" onclick="flipCamera()">Flip Camera</button>
 
   <script>
     const arrow = document.getElementById('arrow');
     const arrivalPrompt = document.getElementById('arrivalPrompt');
+    const camera = document.getElementById('camera');
 
     // Indoor maps by campus and building
     const maps = {
@@ -91,14 +109,26 @@
       alert("Invalid campus, building, or room selection.");
     }
 
-    // Start camera
-    navigator.mediaDevices.getUserMedia({ video: true })
-      .then(stream => {
-        document.getElementById('camera').srcObject = stream;
-      })
-      .catch(err => {
-        alert("Camera access failed. Please use HTTPS and allow permissions.");
-      });
+    // Camera setup
+    let usingRearCamera = true;
+    function startCamera(facingMode) {
+      navigator.mediaDevices.getUserMedia({ video: { facingMode } })
+        .then(stream => {
+          camera.srcObject = stream;
+        })
+        .catch(err => {
+          alert("Camera access failed: " + err.message);
+        });
+    }
+
+    function flipCamera() {
+      usingRearCamera = !usingRearCamera;
+      const mode = usingRearCamera ? { exact: "environment" } : "user";
+      startCamera(mode);
+    }
+
+    // Start with rear camera
+    startCamera({ exact: "environment" });
 
     // Set initial position from start room
     let userPosition = { x: startCoords.x, y: startCoords.y };
