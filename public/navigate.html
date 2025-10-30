@@ -147,6 +147,7 @@
     // Set initial position from start room
     let userPosition = { x: startCoords.x, y: startCoords.y };
     let deviceHeading = 0;
+    const stepLength = 0.7; // average step length in grid units
 
     // Track orientation
     window.addEventListener('deviceorientationabsolute', e => {
@@ -155,11 +156,19 @@
       }
     });
 
-    // Function to update user position from real movement (e.g., QR scan, beacon, manual input)
-    function updateUserPosition(x, y) {
-      userPosition.x = x;
-      userPosition.y = y;
-    }
+    // Basic step detection using vertical acceleration
+    let lastStepTime = 0;
+    window.addEventListener('devicemotion', e => {
+      const acc = e.accelerationIncludingGravity;
+      const now = Date.now();
+
+      if (acc && acc.z > 12 && now - lastStepTime > 500) {
+        lastStepTime = now;
+        const rad = deviceHeading * Math.PI / 180;
+        userPosition.x += Math.cos(rad) * stepLength;
+        userPosition.y += Math.sin(rad) * stepLength;
+      }
+    });
 
     // Calculate angle to destination
     function getAngleToDestination(destX, destY) {
