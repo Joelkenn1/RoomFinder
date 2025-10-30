@@ -1,46 +1,88 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Select Destination</title>
-  <link rel="stylesheet" href="style.css">
+  <title>Select Your Route</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 40px;
+      background: #f0f0f0;
+    }
+    label {
+      display: block;
+      margin-top: 20px;
+      font-weight: bold;
+    }
+    select {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      margin-top: 5px;
+    }
+    button {
+      margin-top: 30px;
+      padding: 12px 20px;
+      font-size: 16px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+  </style>
 </head>
 <body>
-  <div class="container">
-    <h2>Select Your Route</h2>
+  <h1>Indoor Classroom Navigation</h1>
 
-    <label>Campus:</label>
-    <select id="campus">
-      <option value="">Select Campus</option>
-      <option value="north">North Campus</option>
-      <option value="south">South Campus</option>
-    </select>
+  <label for="campus">Campus:</label>
+  <select id="campus">
+    <option value="MainCampus">Main Campus</option>
+    <option value="ArmstrongCampus">Armstrong Campus</option>
+  </select>
 
-    <label>Building:</label>
-    <select id="building">
-      <option value="">Select Building</option>
-      <option value="science">Science Hall</option>
-      <option value="arts">Arts Center</option>
-    </select>
+  <label for="building">Building:</label>
+  <select id="building">
+    <option value="EngineeringHall">Engineering Hall</option>
+    <option value="ScienceCenter">Science Center</option>
+    <option value="Library">Library</option>
+  </select>
 
-    <label>Current Location:</label>
-    <select id="current">
-      <option value="">Current Location</option>
-      <option value="entrance">Main Entrance</option>
-      <option value="library">Library</option>
-    </select>
+  <label for="start">Starting Location:</label>
+  <select id="start">
+    <option value="Entrance">Entrance</option>
+    <option value="Lobby">Lobby</option>
+    <option value="Room101">Room 101</option>
+    <option value="Room102">Room 102</option>
+  </select>
 
-    <label>Destination:</label>
-    <select id="destination">
-      <option value="">Destination</option>
-      <option value="room101">Room 101</option>
-      <option value="room202">Room 202</option>
-    </select>
+  <label for="dest">Destination Classroom:</label>
+  <select id="dest">
+    <option value="Room101">Room 101</option>
+    <option value="Room102">Room 102</option>
+    <option value="Room201">Room 201</option>
+    <option value="Room202">Room 202</option>
+  </select>
 
-    <button onclick="startNavigation()">Start Navigation</button>
-    
+  <button onclick="startNavigation()">Start Navigation</button>
 
-  </div>
+  <script>
+    function startNavigation() {
+      const campus = document.getElementById('campus').value;
+      const building = document.getElementById('building').value;
+      const start = document.getElementById('start').value;
+      const dest = document.getElementById('dest').value;
 
-  <script src="script.js"></script>
+      if (start === dest) {
+        alert("Start and destination cannot be the same.");
+        return;
+      }
+
+      const url = `navigate.html?campus=${campus}&building=${building}&start=${start}&dest=${dest}`;
+      window.location.href = url;
+    }
+  </script>
 </body>
 </html>
