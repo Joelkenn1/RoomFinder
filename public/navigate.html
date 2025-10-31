@@ -151,10 +151,32 @@
     let recentSteps = 0;
     let lastStepTime = 0;
 
+    // Request permission for motion sensors (iOS)
+    function requestSensorAccess() {
+      if (typeof DeviceMotionEvent.requestPermission === 'function') {
+        DeviceMotionEvent.requestPermission()
+          .then(response => {
+            if (response === 'granted') {
+              console.log("Motion permission granted");
+            } else {
+              alert("Motion access denied");
+            }
+          })
+          .catch(console.error);
+      }
+    }
+
+    document.body.addEventListener('click', requestSensorAccess, { once: true });
+
+    // Orientation tracking
     window.addEventListener('deviceorientation', e => {
-      if (e.alpha !== null) deviceHeading = e.alpha;
+      if (e.alpha !== null) {
+        deviceHeading = e.alpha;
+        console.log("Orientation:", deviceHeading);
+      }
     });
 
+    // Step detection
     window.addEventListener('devicemotion', e => {
       const acc = e.accelerationIncludingGravity;
       const now = Date.now();
@@ -164,6 +186,7 @@
         const rad = deviceHeading * Math.PI / 180;
         userPosition.x += Math.cos(rad) * STEP_LENGTH;
         userPosition.y += Math.sin(rad) * STEP_LENGTH;
+        console.log("Step detected. Position:", userPosition);
       }
     });
 
@@ -179,6 +202,7 @@
       progressPrompt.textContent = `You're ${distance.toFixed(1)} units away from ${destRoom}`;
       arrivalPrompt.style.display = (distance < ARRIVAL_RADIUS && recentSteps < 2 && Math.abs(rotation) < ROTATION_TOLERANCE) ? 'block' : 'none';
 
+      console.log("Rotation:", rotation, "Distance:", distance);
       recentSteps = 0;
       requestAnimationFrame(updateNavigation);
     }
