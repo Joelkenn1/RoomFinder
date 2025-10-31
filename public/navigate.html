@@ -76,130 +76,114 @@
   <div id="progressPrompt">Calculating progress...</div>
   <button id="flipButton" onclick="flipCamera()">Flip Camera</button>
 
-<script>
-  const arrow = document.getElementById('arrow');
-  const arrivalPrompt = document.getElementById('arrivalPrompt');
-  const progressPrompt = document.getElementById('progressPrompt');
-  const camera = document.getElementById('camera');
+  <script>
+    const STEP_THRESHOLD = 9;
+    const STEP_INTERVAL = 400;
+    const STEP_LENGTH = 0.7;
+    const ARRIVAL_RADIUS = 1.5;
+    const ROTATION_TOLERANCE = 20;
 
-  const maps = {
-    MainCampus: {
-      EngineeringHall: {
-        Room101: { x: 10, y: 5 },
-        Room102: { x: 12, y: 5 },
-        Room201: { x: 10, y: 10 },
-        Room202: { x: 12, y: 10 },
-        Lobby: { x: 5, y: 2 },
-        Entrance: { x: 0, y: 0 }
+    const arrow = document.getElementById('arrow');
+    const arrivalPrompt = document.getElementById('arrivalPrompt');
+    const progressPrompt = document.getElementById('progressPrompt');
+    const camera = document.getElementById('camera');
+
+    const maps = {
+      MainCampus: {
+        EngineeringHall: {
+          Room101: { x: 10, y: 5 },
+          Room102: { x: 12, y: 5 },
+          Room201: { x: 10, y: 10 },
+          Room202: { x: 12, y: 10 },
+          Lobby: { x: 5, y: 2 },
+          Entrance: { x: 0, y: 0 }
+        },
+        Library: {
+          Room301: { x: 8, y: 3 },
+          Room302: { x: 9, y: 6 },
+          Entrance: { x: 0, y: 0 }
+        }
       },
-      Library: {
-        Room301: { x: 8, y: 3 },
-        Room302: { x: 9, y: 6 },
-        Entrance: { x: 0, y: 0 }
+      ArmstrongCampus: {
+        ScienceCenter: {
+          Room401: { x: 15, y: 10 },
+          Room402: { x: 17, y: 12 },
+          Entrance: { x: 0, y: 0 }
+        }
       }
-    },
-    ArmstrongCampus: {
-      ScienceCenter: {
-        Room401: { x: 15, y: 10 },
-        Room402: { x: 17, y: 12 },
-        Entrance: { x: 0, y: 0 }
+    };
+
+    function normalize(str) {
+      return str?.trim().replace(/\b\w/g, c => c.toUpperCase());
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const campus = normalize(params.get("campus"));
+    const building = normalize(params.get("building"));
+    const startRoom = normalize(params.get("start"));
+    const destRoom = normalize(params.get("dest"));
+
+    const buildingMap = maps?.[campus]?.[building];
+    const startCoords = buildingMap?.[startRoom];
+    const destCoords = buildingMap?.[destRoom];
+
+    if (!startCoords || !destCoords) {
+      alert("Invalid campus, building, or room selection.");
+    }
+
+    let usingRearCamera = true;
+    function startCamera(facingMode) {
+      navigator.mediaDevices.getUserMedia({ video: { facingMode } })
+        .then(stream => camera.srcObject = stream)
+        .catch(err => alert("Camera access failed: " + err.message));
+    }
+
+    function flipCamera() {
+      usingRearCamera = !usingRearCamera;
+      const mode = usingRearCamera ? { exact: "environment" } : "user";
+      startCamera(mode);
+    }
+
+    startCamera({ exact: "environment" });
+
+    let userPosition = { ...startCoords };
+    let deviceHeading = 0;
+    let recentSteps = 0;
+    let lastStepTime = 0;
+
+    window.addEventListener('deviceorientation', e => {
+      if (e.alpha !== null) deviceHeading = e.alpha;
+    });
+
+    window.addEventListener('devicemotion', e => {
+      const acc = e.accelerationIncludingGravity;
+      const now = Date.now();
+      if (acc?.z > STEP_THRESHOLD && now - lastStepTime > STEP_INTERVAL) {
+        lastStepTime = now;
+        recentSteps++;
+        const rad = deviceHeading * Math.PI / 180;
+        userPosition.x += Math.cos(rad) * STEP_LENGTH;
+        userPosition.y += Math.sin(rad) * STEP_LENGTH;
       }
-    }
-  };
+    });
 
-  const params = new URLSearchParams(window.location.search);
-  const campus = params.get("campus");
-  const building = params.get("building");
-  const startRoom = params.get("start");
-  const destRoom = params.get("dest");
+    function updateNavigation() {
+      const dx = destCoords.x - userPosition.x;
+      const dy = destCoords.y - userPosition.y;
+      const bearing = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
+      const rotation = (bearing - deviceHeading + 360) % 360;
 
-  const buildingMap = maps?.[campus]?.[building];
-  const startCoords = buildingMap?.[startRoom];
-  const destCoords = buildingMap?.[destRoom];
+      arrow.style.transform = `translate(-50%, -50%) rotate(${rotation}deg)`;
 
-  if (!buildingMap || !startCoords || !destCoords) {
-    alert("Invalid campus, building, or room selection.");
-  }
+      const distance = Math.hypot(dx, dy);
+      progressPrompt.textContent = `You're ${distance.toFixed(1)} units away from ${destRoom}`;
+      arrivalPrompt.style.display = (distance < ARRIVAL_RADIUS && recentSteps < 2 && Math.abs(rotation) < ROTATION_TOLERANCE) ? 'block' : 'none';
 
-  let usingRearCamera = true;
-  function startCamera(facingMode) {
-    navigator.mediaDevices.getUserMedia({ video: { facingMode } })
-      .then(stream => {
-        camera.srcObject = stream;
-      })
-      .catch(err => {
-        alert("Camera access failed: " + err.message);
-      });
-  }
-
-  function flipCamera() {
-    usingRearCamera = !usingRearCamera;
-    const mode = usingRearCamera ? { exact: "environment" } : "user";
-    startCamera(mode);
-  }
-
-  startCamera({ exact: "environment" });
-
-  let userPosition = { x: startCoords.x, y: startCoords.y };
-  let deviceHeading = 0;
-  const stepLength = 0.7;
-  let recentSteps = 0;
-
-  // Improved orientation tracking
-  window.addEventListener('deviceorientation', e => {
-    if (e.alpha !== null) {
-      deviceHeading = e.alpha;
-    }
-  });
-
-  // Enhanced step detection
-  let lastStepTime = 0;
-  window.addEventListener('devicemotion', e => {
-    const acc = e.accelerationIncludingGravity;
-    const now = Date.now();
-
-    if (acc && acc.z > 9 && now - lastStepTime > 400) {
-      lastStepTime = now;
-      recentSteps++;
-      const rad = deviceHeading * Math.PI / 180;
-      userPosition.x += Math.cos(rad) * stepLength;
-      userPosition.y += Math.sin(rad) * stepLength;
-      console.log("Step detected. Position:", userPosition);
-    }
-  });
-
-  function getAngleToDestination(destX, destY) {
-    const dx = destX - userPosition.x;
-    const dy = destY - userPosition.y;
-    const angle = Math.atan2(dy, dx) * 180 / Math.PI;
-    return (angle + 360) % 360;
-  }
-
-  function updateArrowRotation() {
-    const bearing = getAngleToDestination(destCoords.x, destCoords.y);
-    const rotation = ((bearing - deviceHeading) + 360) % 360;
-    arrow.style.transform = `translate(-50%, -50%) rotate(${rotation}deg)`;
-
-    const distance = Math.sqrt(
-      Math.pow(destCoords.x - userPosition.x, 2) +
-      Math.pow(destCoords.y - userPosition.y, 2)
-    );
-
-    progressPrompt.textContent = `You're ${distance.toFixed(1)} units away from ${destRoom}`;
-
-    // Enhanced proximity zone logic
-    if (distance < 1.5 && recentSteps < 2 && Math.abs(rotation) < 20) {
-      arrivalPrompt.style.display = 'block';
-    } else {
-      arrivalPrompt.style.display = 'none';
+      recentSteps = 0;
+      requestAnimationFrame(updateNavigation);
     }
 
-    recentSteps = 0; // reset after each frame
-    requestAnimationFrame(updateArrowRotation);
-  }
-
-  requestAnimationFrame(updateArrowRotation);
-</script>
-
+    requestAnimationFrame(updateNavigation);
+  </script>
 </body>
 </html>
