@@ -114,7 +114,7 @@
     };
 
     function normalize(str) {
-      return str?.trim().replace(/\b\w/g, c => c.toUpperCase());
+      return str?.trim();
     }
 
     const params = new URLSearchParams(window.location.search);
