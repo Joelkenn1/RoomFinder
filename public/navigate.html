@@ -82,6 +82,8 @@
     const ARRIVAL_RADIUS = 1.5;
     const ROTATION_TOLERANCE = 20;
     const STEP_MAGNITUDE_THRESHOLD = 11;
+    const SMOOTHING_FACTOR = 0.1;
+    const MAX_ROTATION_CHANGE = 30;
 
     const arrow = document.getElementById('arrow');
     const arrivalPrompt = document.getElementById('arrivalPrompt');
@@ -148,8 +150,10 @@
 
     let userPosition = { ...startCoords };
     let deviceHeading = 0;
+    let smoothedHeading = 0;
     let recentSteps = 0;
     let lastStepTime = 0;
+    let lastRotation = 0;
 
     function requestSensorAccess() {
       if (typeof DeviceMotionEvent.requestPermission === 'function') {
@@ -169,8 +173,9 @@
 
     window.addEventListener('deviceorientation', e => {
       if (e.alpha !== null) {
-        deviceHeading = e.alpha;
-        console.log("Orientation:", deviceHeading);
+        smoothedHeading = smoothedHeading * (1 - SMOOTHING_FACTOR) + e.alpha * SMOOTHING_FACTOR;
+        deviceHeading = smoothedHeading;
+        console.log("Smoothed Heading:", deviceHeading);
       }
     });
 
@@ -198,15 +203,21 @@
       const dx = destCoords.x - userPosition.x;
       const dy = destCoords.y - userPosition.y;
       const bearing = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
-      const rotation = (bearing - deviceHeading + 360) % 360;
+      let targetRotation = (bearing - deviceHeading + 360) % 360;
 
-      arrow.style.transform = `translate(-50%, -50%) rotate(${rotation}deg)`;
+      let rotationDiff = ((targetRotation - lastRotation + 540) % 360) - 180;
+      if (Math.abs(rotationDiff) > MAX_ROTATION_CHANGE) {
+        rotationDiff = Math.sign(rotationDiff) * MAX_ROTATION_CHANGE;
+      }
+
+      lastRotation = (lastRotation + rotationDiff + 360) % 360;
+      arrow.style.transform = `translate(-50%, -50%) rotate(${lastRotation}deg)`;
 
       const distance = Math.hypot(dx, dy);
       progressPrompt.textContent = `You're ${distance.toFixed(1)} units away from ${destRoom}`;
-      arrivalPrompt.style.display = (distance < ARRIVAL_RADIUS && recentSteps < 2 && Math.abs(rotation) < ROTATION_TOLERANCE) ? 'block' : 'none';
+      arrivalPrompt.style.display = (distance < ARRIVAL_RADIUS && recentSteps < 2 && Math.abs(rotationDiff) < ROTATION_TOLERANCE) ? 'block' : 'none';
 
-      console.log("Rotation:", rotation, "Distance:", distance);
+      console.log("Rotation:", lastRotation, "Distance:", distance);
       recentSteps = 0;
       requestAnimationFrame(updateNavigation);
     }
