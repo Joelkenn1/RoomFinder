@@ -80,10 +80,6 @@
     const STEP_INTERVAL = 400;
     const STEP_LENGTH = 0.7;
     const ARRIVAL_RADIUS = 1.5;
-    const ROTATION_TOLERANCE = 20;
-    const STEP_MAGNITUDE_THRESHOLD = 11;
-    const SMOOTHING_FACTOR = 0.1;
-    const MAX_ROTATION_CHANGE = 30;
 
     const arrow = document.getElementById('arrow');
     const arrivalPrompt = document.getElementById('arrivalPrompt');
@@ -149,19 +145,14 @@
     startCamera({ exact: "environment" });
 
     let userPosition = { ...startCoords };
-    let deviceHeading = 0;
-    let smoothedHeading = 0;
-    let recentSteps = 0;
     let lastStepTime = 0;
-    let lastRotation = 0;
+    let recentSteps = 0;
 
     function requestSensorAccess() {
       if (typeof DeviceMotionEvent.requestPermission === 'function') {
         DeviceMotionEvent.requestPermission()
           .then(response => {
-            if (response === 'granted') {
-              console.log("Motion permission granted");
-            } else {
+            if (response !== 'granted') {
               alert("Motion access denied");
             }
           })
@@ -171,29 +162,18 @@
 
     document.body.addEventListener('click', requestSensorAccess, { once: true });
 
-    window.addEventListener('deviceorientation', e => {
-      if (e.alpha !== null) {
-        smoothedHeading = smoothedHeading * (1 - SMOOTHING_FACTOR) + e.alpha * SMOOTHING_FACTOR;
-        deviceHeading = smoothedHeading;
-        console.log("Smoothed Heading:", deviceHeading);
-      }
-    });
-
     window.addEventListener('devicemotion', e => {
       const acc = e.accelerationIncludingGravity;
       const now = Date.now();
       if (!acc) return;
 
       const magnitude = Math.sqrt(acc.x**2 + acc.y**2 + acc.z**2);
-      if (magnitude > STEP_MAGNITUDE_THRESHOLD && now - lastStepTime > STEP_INTERVAL) {
+      if (magnitude > 11 && now - lastStepTime > STEP_INTERVAL) {
         lastStepTime = now;
         recentSteps++;
 
-        const correctedHeading = (deviceHeading + 180) % 360;
-        const rad = correctedHeading * Math.PI / 180;
-
-        userPosition.x += Math.cos(rad) * STEP_LENGTH;
-        userPosition.y += Math.sin(rad) * STEP_LENGTH;
+        // Simulate forward movement along X-axis
+        userPosition.x += STEP_LENGTH;
 
         console.log("Step detected. Position:", userPosition);
       }
@@ -203,21 +183,13 @@
       const dx = destCoords.x - userPosition.x;
       const dy = destCoords.y - userPosition.y;
       const bearing = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
-      let targetRotation = (bearing - deviceHeading + 360) % 360;
 
-      let rotationDiff = ((targetRotation - lastRotation + 540) % 360) - 180;
-      if (Math.abs(rotationDiff) > MAX_ROTATION_CHANGE) {
-        rotationDiff = Math.sign(rotationDiff) * MAX_ROTATION_CHANGE;
-      }
-
-      lastRotation = (lastRotation + rotationDiff + 360) % 360;
-      arrow.style.transform = `translate(-50%, -50%) rotate(${lastRotation}deg)`;
+      arrow.style.transform = `translate(-50%, -50%) rotate(${bearing}deg)`;
 
       const distance = Math.hypot(dx, dy);
       progressPrompt.textContent = `You're ${distance.toFixed(1)} units away from ${destRoom}`;
-      arrivalPrompt.style.display = (distance < ARRIVAL_RADIUS && recentSteps < 2 && Math.abs(rotationDiff) < ROTATION_TOLERANCE) ? 'block' : 'none';
+      arrivalPrompt.style.display = (distance < ARRIVAL_RADIUS && recentSteps < 2) ? 'block' : 'none';
 
-      console.log("Rotation:", lastRotation, "Distance:", distance);
       recentSteps = 0;
       requestAnimationFrame(updateNavigation);
     }
