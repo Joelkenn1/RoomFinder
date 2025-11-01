@@ -191,7 +191,8 @@
       const dy = destCoords.y - userPosition.y;
       const bearing = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
 
-      arrow.style.transform = `translate(-50%, -50%) rotate(${bearing}deg)`;
+      const relativeRotation = (bearing - deviceHeading + 360) % 360;
+      arrow.style.transform = `translate(-50%, -50%) rotate(${relativeRotation}deg)`;
 
       const distance = Math.hypot(dx, dy);
       if (distance > previousDistance) {
