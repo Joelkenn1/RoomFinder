@@ -81,7 +81,7 @@
     const STEP_LENGTH = 0.7;
     const ARRIVAL_RADIUS = 1.5;
     const ROTATION_TOLERANCE = 20;
-    const STEP_MAGNITUDE_THRESHOLD = 11; // total acceleration threshold
+    const STEP_MAGNITUDE_THRESHOLD = 11;
 
     const arrow = document.getElementById('arrow');
     const arrivalPrompt = document.getElementById('arrivalPrompt');
@@ -183,9 +183,13 @@
       if (magnitude > STEP_MAGNITUDE_THRESHOLD && now - lastStepTime > STEP_INTERVAL) {
         lastStepTime = now;
         recentSteps++;
-        const rad = deviceHeading * Math.PI / 180;
+
+        const correctedHeading = (deviceHeading + 180) % 360;
+        const rad = correctedHeading * Math.PI / 180;
+
         userPosition.x += Math.cos(rad) * STEP_LENGTH;
         userPosition.y += Math.sin(rad) * STEP_LENGTH;
+
         console.log("Step detected. Position:", userPosition);
       }
     });
