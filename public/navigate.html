@@ -145,8 +145,10 @@
     startCamera({ exact: "environment" });
 
     let userPosition = { ...startCoords };
+    let deviceHeading = 0;
     let lastStepTime = 0;
     let recentSteps = 0;
+    let previousDistance = Math.hypot(destCoords.x - userPosition.x, destCoords.y - userPosition.y);
 
     function requestSensorAccess() {
       if (typeof DeviceMotionEvent.requestPermission === 'function') {
@@ -162,6 +164,12 @@
 
     document.body.addEventListener('click', requestSensorAccess, { once: true });
 
+    window.addEventListener('deviceorientation', e => {
+      if (e.alpha !== null) {
+        deviceHeading = e.alpha;
+      }
+    });
+
     window.addEventListener('devicemotion', e => {
       const acc = e.accelerationIncludingGravity;
       const now = Date.now();
@@ -172,10 +180,9 @@
         lastStepTime = now;
         recentSteps++;
 
-        // Simulate forward movement along X-axis
-        userPosition.x += STEP_LENGTH;
-
-        console.log("Step detected. Position:", userPosition);
+        const rad = deviceHeading * Math.PI / 180;
+        userPosition.x += Math.cos(rad) * STEP_LENGTH;
+        userPosition.y += Math.sin(rad) * STEP_LENGTH;
       }
     });
 
@@ -187,9 +194,15 @@
       arrow.style.transform = `translate(-50%, -50%) rotate(${bearing}deg)`;
 
       const distance = Math.hypot(dx, dy);
-      progressPrompt.textContent = `You're ${distance.toFixed(1)} units away from ${destRoom}`;
+      if (distance > previousDistance) {
+        progressPrompt.textContent = `You're moving away from ${destRoom}`;
+      } else {
+        progressPrompt.textContent = `You're ${distance.toFixed(1)} units away from ${destRoom}`;
+      }
+
       arrivalPrompt.style.display = (distance < ARRIVAL_RADIUS && recentSteps < 2) ? 'block' : 'none';
 
+      previousDistance = distance;
       recentSteps = 0;
       requestAnimationFrame(updateNavigation);
     }
