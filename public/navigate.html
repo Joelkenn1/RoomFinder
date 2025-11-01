@@ -77,11 +77,11 @@
   <button id="flipButton" onclick="flipCamera()">Flip Camera</button>
 
   <script>
-    const STEP_THRESHOLD = 2.0;
     const STEP_INTERVAL = 400;
     const STEP_LENGTH = 0.7;
     const ARRIVAL_RADIUS = 1.5;
     const ROTATION_TOLERANCE = 20;
+    const STEP_MAGNITUDE_THRESHOLD = 11; // total acceleration threshold
 
     const arrow = document.getElementById('arrow');
     const arrivalPrompt = document.getElementById('arrivalPrompt');
@@ -151,7 +151,6 @@
     let recentSteps = 0;
     let lastStepTime = 0;
 
-    // Request permission for motion sensors (iOS)
     function requestSensorAccess() {
       if (typeof DeviceMotionEvent.requestPermission === 'function') {
         DeviceMotionEvent.requestPermission()
@@ -168,7 +167,6 @@
 
     document.body.addEventListener('click', requestSensorAccess, { once: true });
 
-    // Orientation tracking
     window.addEventListener('deviceorientation', e => {
       if (e.alpha !== null) {
         deviceHeading = e.alpha;
@@ -176,11 +174,13 @@
       }
     });
 
-    // Step detection
     window.addEventListener('devicemotion', e => {
       const acc = e.accelerationIncludingGravity;
       const now = Date.now();
-      if (acc?.z > STEP_THRESHOLD && now - lastStepTime > STEP_INTERVAL) {
+      if (!acc) return;
+
+      const magnitude = Math.sqrt(acc.x**2 + acc.y**2 + acc.z**2);
+      if (magnitude > STEP_MAGNITUDE_THRESHOLD && now - lastStepTime > STEP_INTERVAL) {
         lastStepTime = now;
         recentSteps++;
         const rad = deviceHeading * Math.PI / 180;
