@@ -3,30 +3,37 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <script src="https://cdn.tailwindcss.com"></script>
-  
   <title>AR Room Finder</title>
-
+  <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body {
-      background: url('hallway.jpg') no-repeat center center fixed;
-      background-size: cover;
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
     }
+
+    body {
+      background: url('hallway.jpg') no-repeat center center;
+      background-size: cover;
+      background-attachment: scroll;
+    }
+
     .overlay {
       background-color: rgba(0, 0, 0, 0.5);
     }
   </style>
 </head>
-  
-<body class="h-screen w-screen flex items-center justify-center"> <!-- Center body content both veritcally/hortizontally -->
-  <div class="overlay absolute inset-0 z-0"></div> <!-- Creates a semi-transparent dark overlay on top of background image -->
-  <div class="relative z-10 text-center text-white px-6">  <!-- Center text and make it white -->
-    <h1 class="text-5xl md:text-6xl font-bold mb-8 drop-shadow-lg">AR Room Finder</h1>
+<body class="relative h-full w-full flex items-center justify-center">
+  <!-- Dark overlay for readability -->
+  <div class="overlay absolute inset-0 z-0"></div>
+
+  <!-- Main content -->
+  <div class="relative z-10 text-center text-white px-4"> <!-- Center white text prompts on top of background -->
+    <h1 class="text-4xl sm:text-5xl font-bold mb-6 drop-shadow-lg">AR Room Finder</h1>
     <button onclick="window.location.href='select.html'"
-      class="bg-blue-600 hover:bg-blue-700 text-white text-xl md:text-2xl font-semibold py-4 px-8 rounded-lg shadow-lg transition">
+      class="bg-blue-600 hover:bg-blue-700 text-white text-lg sm:text-xl font-semibold py-3 px-6 rounded-lg shadow-lg transition duration-300 ease-in-out">
       Find Classes
     </button>
   </div>
 </body>
-  
 </html>
