@@ -5,17 +5,37 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AR Room Finder</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @keyframes bounceIn {
+      0% {
+        transform: scale(0.5);
+        opacity: 0;
+      }
+      60% {
+        transform: scale(1.2);
+        opacity: 1;
+      }
+      100% {
+        transform: scale(1);
+      }
+    }
+
+    .animate-bounceIn {
+      animation: bounceIn 0.8s ease-out forwards;
+    }
+  </style>
 </head>
-<body class="min-h-screen bg-[url('hallway.jpg')] bg-cover bg-center relative">
+<body class="min-h-screen bg-[url('hallway.jpg')] bg-cover bg-center relative flex items-center justify-center">
   <!-- Overlay -->
   <div class="absolute inset-0 bg-black/50 z-0"></div>
 
   <!-- Main content -->
-  <div class="relative z-10 flex flex-col items-center justify-center text-white text-center px-4 sm:px-6 py-10">
+  <div class="relative z-10 flex flex-col items-center justify-center text-white text-center px-4 sm:px-6">
     <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 drop-shadow-lg">AR Room Finder</h1>
 
-    <!-- Logo under title -->
-    <img src="navigation.jpg" alt="Navigation Logo" class="w-24 sm:w-32 md:w-40 mb-8" />
+    <!-- Animated Logo -->
+    <img src="navigation.png" alt="Navigation Logo"
+      class="w-24 sm:w-32 md:w-40 mb-8 animate-bounceIn hover:scale-105 transition-transform duration-300 ease-in-out" />
 
     <button onclick="window.location.href='select.html'"
       class="bg-blue-600 hover:bg-blue-700 text-white text-base sm:text-lg md:text-xl font-semibold py-3 px-6 rounded-lg shadow-lg transition duration-300 ease-in-out">
