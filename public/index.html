@@ -1,13 +1,32 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  
   <title>AR Room Finder</title>
-  <link rel="stylesheet" href="style.css">
+
+  <style>
+    body {
+      background: url('hallway.jpg') no-repeat center center fixed;
+      background-size: cover;
+    }
+    .overlay {
+      background-color: rgba(0, 0, 0, 0.5);
+    }
+  </style>
 </head>
-<body>
-  <div class="container">
-    <h1>AR Room Finder</h1>
-    <button onclick="window.location.href='select.html'">Find Classes</button>
+  
+<body class="h-screen w-screen flex items-center justify-center"> <!-- Center body content both veritcally/hortizontally -->
+  <div class="overlay absolute inset-0 z-0"></div> <!-- Creates a semi-transparent dark overlay on top of background image -->
+  <div class="relative z-10 text-center text-white px-6">  <!-- Center text and make it white -->
+    <h1 class="text-5xl md:text-6xl font-bold mb-8 drop-shadow-lg">AR Room Finder</h1>
+    <button onclick="window.location.href='select.html'"
+      class="bg-blue-600 hover:bg-blue-700 text-white text-xl md:text-2xl font-semibold py-4 px-8 rounded-lg shadow-lg transition">
+      Find Classes
+    </button>
   </div>
 </body>
+  
 </html>
