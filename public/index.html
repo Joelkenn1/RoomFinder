@@ -5,30 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AR Room Finder</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    html, body {
-      height: 100%;
-      margin: 0;
-      padding: 0;
-    }
-
-    body {
-      background: url('hallway.jpg') no-repeat center center;
-      background-size: cover;
-      background-position: center;
-      background-attachment: scroll;
-    }
-
-    .overlay {
-      background-color: rgba(0, 0, 0, 0.5);
-    }
-  </style>
 </head>
-<body class="relative h-full w-full flex items-center justify-center">
-  <div class="overlay absolute inset-0 z-0"></div>
+<body class="min-h-screen bg-[url('school-hallway.jpg')] bg-cover bg-center relative">
+  <!-- Overlay -->
+  <div class="absolute inset-0 bg-black/50 z-0"></div>
 
-  <div class="relative z-10 text-center text-white px-4 sm:px-6">
-    <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold mb-8 drop-shadow-lg">AR Room Finder</h1>
+  <!-- Main content -->
+  <div class="relative z-10 flex flex-col items-center justify-center text-white text-center px-4 sm:px-6 py-10">
+    <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 drop-shadow-lg">AR Room Finder</h1>
+
+    <!-- Logo under title -->
+    <img src="navigation.jpg" alt="Navigation Logo" class="w-24 sm:w-32 md:w-40 mb-8" />
+
     <button onclick="window.location.href='select.html'"
       class="bg-blue-600 hover:bg-blue-700 text-white text-base sm:text-lg md:text-xl font-semibold py-3 px-6 rounded-lg shadow-lg transition duration-300 ease-in-out">
       Find Classes
