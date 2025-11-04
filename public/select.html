@@ -3,39 +3,19 @@
 <head>
   <title>Select Your Route</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    html, body {
-      height: 100%;
-      margin: 0;
-      padding: 0;
-    }
-
-    body {
-      background: url('walking.jpg') no-repeat center center;
-      background-size: cover;
-      background-position: center;
-      background-attachment: scroll;
-    }
-
-    .overlay {
-      background-color: rgba(0, 0, 0, 0.5);
-    }
-
-    select {
-      background-color: rgba(255, 255, 255, 0.9);
-    }
-  </style>
 </head>
-<body class="relative h-full w-full flex items-center justify-center">
-  <div class="overlay absolute inset-0 z-0"></div>
+<body class="min-h-screen bg-[url('walking.jpg')] bg-cover bg-center relative">
+  <!-- Overlay -->
+  <div class="absolute inset-0 bg-black/50 z-0"></div>
 
+  <!-- Content -->
   <div class="relative z-10 w-full max-w-md sm:max-w-lg lg:max-w-xl mx-auto px-4 sm:px-6 py-10 text-white text-center">
     <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold mb-8 drop-shadow-lg">Indoor Classroom Navigation</h1>
 
     <div class="space-y-6 text-left">
       <div>
         <label for="campus" class="block text-base sm:text-lg font-semibold mb-2">Campus:</label>
-        <select id="campus" onchange="updateBuildings()" class="w-full p-3 rounded-md text-black text-base sm:text-lg">
+        <select id="campus" onchange="updateBuildings()" class="w-full p-3 rounded-md text-black text-base sm:text-lg bg-white/90">
           <option value="MainCampus">Main Campus</option>
           <option value="ArmstrongCampus">Armstrong Campus</option>
         </select>
@@ -43,21 +23,21 @@
 
       <div>
         <label for="building" class="block text-base sm:text-lg font-semibold mb-2">Building:</label>
-        <select id="building" onchange="updateRooms()" class="w-full p-3 rounded-md text-black text-base sm:text-lg">
+        <select id="building" onchange="updateRooms()" class="w-full p-3 rounded-md text-black text-base sm:text-lg bg-white/90">
           <!-- Options will be populated dynamically -->
         </select>
       </div>
 
       <div>
         <label for="start" class="block text-base sm:text-lg font-semibold mb-2">Starting Location:</label>
-        <select id="start" class="w-full p-3 rounded-md text-black text-base sm:text-lg">
+        <select id="start" class="w-full p-3 rounded-md text-black text-base sm:text-lg bg-white/90">
           <!-- Options will be populated dynamically -->
         </select>
       </div>
 
       <div>
         <label for="dest" class="block text-base sm:text-lg font-semibold mb-2">Destination Classroom:</label>
-        <select id="dest" class="w-full p-3 rounded-md text-black text-base sm:text-lg">
+        <select id="dest" class="w-full p-3 rounded-md text-black text-base sm:text-lg bg-white/90">
           <!-- Options will be populated dynamically -->
         </select>
       </div>
@@ -70,7 +50,6 @@
       </div>
     </div>
   </div>
-
   <script>
     const roomMap = {
       MainCampus: {
