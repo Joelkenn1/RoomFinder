@@ -2,63 +2,75 @@
 <html>
 <head>
   <title>Select Your Route</title>
+  <script src="https://cdn.tailwindcss.com"></script>
   <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+
     body {
-      font-family: sans-serif;
-      padding: 40px;
-      background: #f0f0f0;
+      background: url('walking.jpg') no-repeat center center;
+      background-size: cover;
+      background-attachment: scroll;
     }
-    label {
-      display: block;
-      margin-top: 20px;
-      font-weight: bold;
+
+    .overlay {
+      background-color: rgba(0, 0, 0, 0.5);
     }
+
     select {
-      width: 100%;
-      padding: 10px;
-      font-size: 16px;
-      margin-top: 5px;
-    }
-    button {
-      margin-top: 30px;
-      padding: 12px 20px;
-      font-size: 16px;
-      background-color: #007bff;
-      color: white;
-      border: none;
-      cursor: pointer;
-      border-radius: 5px;
-    }
-    button:hover {
-      background-color: #0056b3;
+      background-color: rgba(255, 255, 255, 0.9);
     }
   </style>
 </head>
-<body>
-  <h1>Indoor Classroom Navigation</h1>
+<body class="relative h-full w-full flex items-center justify-center">
+  <!-- Dark overlay for contrast -->
+  <div class="overlay absolute inset-0 z-0"></div>
 
-  <label for="campus">Campus:</label>
-  <select id="campus" onchange="updateBuildings()">
-    <option value="MainCampus">Main Campus</option>
-    <option value="ArmstrongCampus">Armstrong Campus</option>
-  </select>
+  <!-- Main content -->
+  <div class="relative z-10 w-full max-w-md mx-auto px-6 py-10 text-white text-center">
+    <h1 class="text-3xl sm:text-4xl font-bold mb-8 drop-shadow-lg">Indoor Classroom Navigation</h1>
 
-  <label for="building">Building:</label>
-  <select id="building" onchange="updateRooms()">
-    <!-- Options will be populated dynamically -->
-  </select>
+    <div class="space-y-6 text-left">
+      <div>
+        <label for="campus" class="block text-lg font-semibold mb-2">Campus:</label>
+        <select id="campus" onchange="updateBuildings()" class="w-full p-3 rounded-md text-black text-lg">
+          <option value="MainCampus">Main Campus</option>
+          <option value="ArmstrongCampus">Armstrong Campus</option>
+        </select>
+      </div>
 
-  <label for="start">Starting Location:</label>
-  <select id="start">
-    <!-- Options will be populated dynamically -->
-  </select>
+      <div>
+        <label for="building" class="block text-lg font-semibold mb-2">Building:</label>
+        <select id="building" onchange="updateRooms()" class="w-full p-3 rounded-md text-black text-lg">
+          <!-- Options will be populated dynamically -->
+        </select>
+      </div>
 
-  <label for="dest">Destination Classroom:</label>
-  <select id="dest">
-    <!-- Options will be populated dynamically -->
-  </select>
+      <div>
+        <label for="start" class="block text-lg font-semibold mb-2">Starting Location:</label>
+        <select id="start" class="w-full p-3 rounded-md text-black text-lg">
+          <!-- Options will be populated dynamically -->
+        </select>
+      </div>
 
-  <button onclick="startNavigation()">Start Navigation</button>
+      <div>
+        <label for="dest" class="block text-lg font-semibold mb-2">Destination Classroom:</label>
+        <select id="dest" class="w-full p-3 rounded-md text-black text-lg">
+          <!-- Options will be populated dynamically -->
+        </select>
+      </div>
+
+      <div class="text-center pt-4">
+        <button onclick="startNavigation()"
+          class="bg-blue-600 hover:bg-blue-700 text-white text-lg font-semibold py-3 px-6 rounded-lg shadow-lg transition duration-300 ease-in-out">
+          Start Navigation
+        </button>
+      </div>
+    </div>
+  </div>
 
   <script>
     const roomMap = {
