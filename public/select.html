@@ -4,52 +4,53 @@
   <title>Select Your Route</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="min-h-screen bg-[url('walking.jpg')] bg-cover bg-contain bg-center relative flex items-center justify-center">
+<body class="min-h-screen bg-[url('walking.jpg')] bg-cover bg-center relative flex items-center justify-center">
   <!-- Overlay -->
   <div class="absolute inset-0 bg-black/50 z-0"></div>
 
   <!-- Content -->
-    <div class="relative z-10 flex flex-col items-center justify-center text-white text-center mx-auto px-4 sm:px-6 py-10">
-    <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold mb-8 drop-shadow-lg">Indoor Classroom Navigation</h1>
+  <div class="relative z-10 flex flex-col items-center justify-center text-white text-center mx-auto px-4 sm:px-6 py-10">
+    <h1 class="text-4xl sm:text-5xl md:text-6xl font-bold mb-8 drop-shadow-lg">Indoor Classroom Navigation</h1>
 
-    <div class="space-y-6 text-left">
+    <div class="space-y-6 text-left w-full max-w-md sm:max-w-lg">
       <div>
-        <label for="campus" class="block text-base sm:text-lg font-semibold mb-2">Campus:</label>
-        <select id="campus" onchange="updateBuildings()" class="w-full p-3 rounded-md text-black text-base sm:text-lg bg-white/90">
+        <label for="campus" class="block text-lg sm:text-xl font-semibold mb-2">Campus:</label>
+        <select id="campus" onchange="updateBuildings()" class="w-full p-4 rounded-md text-black text-lg sm:text-xl bg-white/90">
           <option value="MainCampus">Main Campus</option>
           <option value="ArmstrongCampus">Armstrong Campus</option>
         </select>
       </div>
 
       <div>
-        <label for="building" class="block text-base sm:text-lg font-semibold mb-2">Building:</label>
-        <select id="building" onchange="updateRooms()" class="w-full p-3 rounded-md text-black text-base sm:text-lg bg-white/90">
+        <label for="building" class="block text-lg sm:text-xl font-semibold mb-2">Building:</label>
+        <select id="building" onchange="updateRooms()" class="w-full p-4 rounded-md text-black text-lg sm:text-xl bg-white/90">
           <!-- Options will be populated dynamically -->
         </select>
       </div>
 
       <div>
-        <label for="start" class="block text-base sm:text-lg font-semibold mb-2">Starting Location:</label>
-        <select id="start" class="w-full p-3 rounded-md text-black text-base sm:text-lg bg-white/90">
+        <label for="start" class="block text-lg sm:text-xl font-semibold mb-2">Starting Location:</label>
+        <select id="start" class="w-full p-4 rounded-md text-black text-lg sm:text-xl bg-white/90">
           <!-- Options will be populated dynamically -->
         </select>
       </div>
 
       <div>
-        <label for="dest" class="block text-base sm:text-lg font-semibold mb-2">Destination Classroom:</label>
-        <select id="dest" class="w-full p-3 rounded-md text-black text-base sm:text-lg bg-white/90">
+        <label for="dest" class="block text-lg sm:text-xl font-semibold mb-2">Destination Classroom:</label>
+        <select id="dest" class="w-full p-4 rounded-md text-black text-lg sm:text-xl bg-white/90">
           <!-- Options will be populated dynamically -->
         </select>
       </div>
 
       <div class="text-center pt-4">
         <button onclick="startNavigation()"
-          class="bg-blue-600 hover:bg-blue-700 text-white text-base sm:text-lg font-semibold py-3 px-6 rounded-lg shadow-lg transition duration-300 ease-in-out">
+          class="bg-blue-600 hover:bg-blue-700 text-white text-lg sm:text-xl font-semibold py-4 px-6 rounded-lg shadow-lg transition duration-300 ease-in-out">
           Start Navigation
         </button>
       </div>
     </div>
   </div>
+  
   <script>
     const roomMap = {
       MainCampus: {
