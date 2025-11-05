@@ -123,9 +123,16 @@
     const startCoords = buildingMap?.[startRoom];
     const destCoords = buildingMap?.[destRoom];
 
+        
+    let userPosition = { ...startCoords };
+    let deviceHeading = 0;
+    let previousDistance = Math.hypot(destCoords.x - userPosition.x, destCoords.y - userPosition.y);
+    let currentBearing = 0;
+    
     if (!startCoords || !destCoords) {
       alert("Invalid campus, building, or room selection.");
     }
+    
 
     let usingRearCamera = true;
     function startCamera(facingMode) {
@@ -140,10 +147,8 @@
       startCamera(mode);
     }
 
-    let userPosition = { ...startCoords };
-    let deviceHeading = 0;
-    let previousDistance = Math.hypot(destCoords.x - userPosition.x, destCoords.y - userPosition.y);
-    let currentBearing = 0;
+    startCamera({ exact: "environment" });
+
 
     function handleOrientation(e) {
       if (e.alpha !== null) {
@@ -151,21 +156,8 @@
       }
     }
 
-  function requestSensorAccess() {
-      if (typeof DeviceMotionEvent.requestPermission === 'function') {
-        DeviceMotionEvent.requestPermission()
-          .then(response => {
-            if (response !== 'granted') {
-              alert("Motion access denied");
-            }
-          })
-          .catch(console.error);
-      }
-    }
+    window.addEventListener('deviceorientation', handleOrientation);
 
-    // document.body.addEventListener('click', requestSensorAccess, { once: true });
-    requestSensorAccess();
-    startCamera({ exact: "environment" });
     
     
     function updateNavigation() {
