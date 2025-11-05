@@ -151,27 +151,22 @@
       }
     }
 
-    window.addEventListener('load', () => {
-      if (typeof DeviceMotionEvent?.requestPermission === 'function') {
+  function requestSensorAccess() {
+      if (typeof DeviceMotionEvent.requestPermission === 'function') {
         DeviceMotionEvent.requestPermission()
           .then(response => {
-            if (response === 'granted') {
-              window.addEventListener('deviceorientation', handleOrientation);
-            } else {
-              alert("Motion permission denied. Navigation may not work properly.");
+            if (response !== 'granted') {
+              alert("Motion access denied");
             }
           })
-          .catch(err => {
-            console.error("Motion permission error:", err);
-          });
-      } else {
-        window.addEventListener('deviceorientation', handleOrientation);
+          .catch(console.error);
       }
+    }
 
-      // Start camera after motion permission
-      startCamera({ exact: "environment" });
-    });
-
+    document.body.addEventListener('click', requestSensorAccess, { once: true });
+    startCamera({ exact: "environment" });
+    
+    
     function updateNavigation() {
       const dx = destCoords.x - userPosition.x;
       const dy = destCoords.y - userPosition.y;
