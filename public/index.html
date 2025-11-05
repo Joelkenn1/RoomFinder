@@ -37,34 +37,11 @@
     <img src="navigation.png" alt="Navigation Logo"
       class="w-24 sm:w-32 md:w-40 mb-8 animate-bounceIn hover:scale-105 transition-transform duration-300 ease-in-out" />
 
-    <button onclick="findClasses()"
+    <button onclick="window.location.href = 'select.html'"
       class="bg-blue-600 hover:bg-blue-700 text-white text-base sm:text-lg md:text-xl font-semibold py-3 px-6 rounded-lg shadow-lg transition duration-300 ease-in-out">
       Find Classes
     </button>
   </div>
 
-  <script>
-  function findClasses() {
-    if (typeof DeviceMotionEvent?.requestPermission === 'function') {
-      DeviceMotionEvent.requestPermission()
-        .then(response => {
-          if (response === 'granted') {
-            // Optional: store permission status in sessionStorage
-            sessionStorage.setItem('motionAccess', 'granted');
-          } else {
-            alert("Motion access denied. Navigation may not work properly.");
-          }
-          window.location.href = 'select.html';
-        })
-        .catch(err => {
-          console.error("Motion permission error:", err);
-          window.location.href = 'select.html';
-        });
-    } else {
-      // Non-iOS devices
-      window.location.href = 'select.html';
-    }
-  }
-  </script>
 </body>
 </html>
