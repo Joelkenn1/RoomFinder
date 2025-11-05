@@ -68,7 +68,6 @@
       background-color: #0056b3;
     }
 
-    /* Overlay styles */
     #motionOverlay {
       position: fixed;
       top: 0;
@@ -84,7 +83,7 @@
 
     #motionButton {
       padding: 16px 32px;
-      font-size: 22px;
+      font-size: 18px;
       background-color: #28a745;
       color: white;
       border: none;
@@ -101,9 +100,8 @@
   </style>
 </head>
 <body>
-  <!-- Overlay button -->
   <div id="motionOverlay">
-    <button id="motionButton" onclick="requestMotionAccess()">Start Navigation</button>
+    <button id="motionButton" onclick="enableMotion()">Enable Motion</button>
   </div>
 
   <video id="camera" autoplay playsinline></video>
@@ -187,7 +185,7 @@
       }
     }
 
-    function requestMotionAccess() {
+    function enableMotion() {
       const overlay = document.getElementById('motionOverlay');
       overlay.style.display = 'none';
 
@@ -196,7 +194,6 @@
           .then(response => {
             if (response === 'granted') {
               window.addEventListener('deviceorientation', handleOrientation);
-              startCamera({ exact: "environment" });
               requestAnimationFrame(updateNavigation);
             } else {
               alert("Motion access denied. Navigation may not work properly.");
@@ -207,7 +204,6 @@
           });
       } else {
         window.addEventListener('deviceorientation', handleOrientation);
-        startCamera({ exact: "environment" });
         requestAnimationFrame(updateNavigation);
       }
     }
@@ -228,6 +224,11 @@
       previousDistance = distance;
       requestAnimationFrame(updateNavigation);
     }
+
+    // ✅ Start camera immediately on page load
+    window.addEventListener('load', () => {
+      startCamera({ exact: "environment" });
+    });
   </script>
 </body>
 </html>
