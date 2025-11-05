@@ -189,8 +189,8 @@
       const overlay = document.getElementById('startOverlay');
       overlay.style.display = 'none';
 
-      if (typeof DeviceMotionEvent?.requestPermission === 'function') {
-        DeviceMotionEvent.requestPermission()
+      
+      DeviceMotionEvent.requestPermission()
           .then(response => {
             if (response === 'granted') {
               window.addEventListener('deviceorientation', handleOrientation);
@@ -208,7 +208,7 @@
         startCamera({ exact: "environment" });
         requestAnimationFrame(updateNavigation);
       }
-    }
+    
 
     function updateNavigation() {
       const dx = destCoords.x - userPosition.x;
