@@ -163,7 +163,8 @@
       }
     }
 
-    document.body.addEventListener('click', requestSensorAccess, { once: true });
+    // document.body.addEventListener('click', requestSensorAccess, { once: true });
+    requestSensorAccess();
     startCamera({ exact: "environment" });
     
     
