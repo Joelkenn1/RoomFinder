@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Log Coordinates</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 2rem;
+      text-align: center;
+    }
+    button {
+      padding: 1rem 2rem;
+      font-size: 1.2rem;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    #output {
+      margin-top: 2rem;
+      font-size: 1.1rem;
+      background: #f0f0f0;
+      padding: 1rem;
+      border-radius: 6px;
+      word-break: break-word;
+    }
+  </style>
+</head>
+<body>
+  <h1>Log Coordinates</h1>
+  <button onclick="logCoordinates()">Log Coordinates</button>
+  <div id="output">Coordinates will appear here...</div>
+
+  <script>
+    function logCoordinates() {
+      navigator.geolocation.getCurrentPosition(pos => {
+        const lat = pos.coords.latitude.toFixed(6);
+        const lon = pos.coords.longitude.toFixed(6);
+        document.getElementById('output').textContent = `Latitude: ${lat}, Longitude: ${lon}`;
+      }, err => {
+        document.getElementById('output').textContent = `Error: ${err.message}`;
+      });
+    }
+  </script>
+</body>
+</html>
