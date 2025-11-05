@@ -67,43 +67,9 @@
     #flipButton:hover {
       background-color: #0056b3;
     }
-    #startOverlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      background: rgba(0,0,0,0.85);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 50;
-      opacity: 0;
-      animation: fadeIn 2s forwards;
-    }
-    #startButton {
-      padding: 14px 28px;
-      font-size: 18px;
-      background-color: #28a745;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      box-shadow: 0 0 10px rgba(0,0,0,0.3);
-    }
-    #startButton:hover {
-      background-color: #218838;
-    }
-    @keyframes fadeIn {
-      to { opacity: 1; }
-    }
   </style>
 </head>
 <body>
-  <div id="startOverlay">
-    <button id="startButton" onclick="startNavigation()">Start Navigation</button>
-  </div>
-
   <video id="camera" autoplay playsinline></video>
   <img id="arrow" src="arrow.png" alt="Arrow">
   <div id="arrivalPrompt">You've arrived at your classroom!</div>
@@ -161,12 +127,7 @@
       alert("Invalid campus, building, or room selection.");
     }
 
-    let userPosition = { ...startCoords };
-    let deviceHeading = 0;
-    let previousDistance = Math.hypot(destCoords.x - userPosition.x, destCoords.y - userPosition.y);
-    let currentBearing = 0;
     let usingRearCamera = true;
-
     function startCamera(facingMode) {
       navigator.mediaDevices.getUserMedia({ video: { facingMode } })
         .then(stream => camera.srcObject = stream)
@@ -179,25 +140,25 @@
       startCamera(mode);
     }
 
+    let userPosition = { ...startCoords };
+    let deviceHeading = 0;
+    let previousDistance = Math.hypot(destCoords.x - userPosition.x, destCoords.y - userPosition.y);
+    let currentBearing = 0;
+
     function handleOrientation(e) {
       if (e.alpha !== null) {
         deviceHeading = e.alpha;
       }
     }
 
-    function startNavigation() {
-      const overlay = document.getElementById('startOverlay');
-      overlay.style.display = 'none';
-
-      
-      DeviceMotionEvent.requestPermission()
+    window.addEventListener('load', () => {
+      if (typeof DeviceMotionEvent?.requestPermission === 'function') {
+        DeviceMotionEvent.requestPermission()
           .then(response => {
             if (response === 'granted') {
               window.addEventListener('deviceorientation', handleOrientation);
-              startCamera({ exact: "environment" });
-              requestAnimationFrame(updateNavigation);
             } else {
-              alert("Motion access denied. Navigation may not work properly.");
+              alert("Motion permission denied. Navigation may not work properly.");
             }
           })
           .catch(err => {
@@ -205,10 +166,11 @@
           });
       } else {
         window.addEventListener('deviceorientation', handleOrientation);
-        startCamera({ exact: "environment" });
-        requestAnimationFrame(updateNavigation);
       }
-    
+
+      // Start camera after motion permission
+      startCamera({ exact: "environment" });
+    });
 
     function updateNavigation() {
       const dx = destCoords.x - userPosition.x;
@@ -226,6 +188,8 @@
       previousDistance = distance;
       requestAnimationFrame(updateNavigation);
     }
+
+    requestAnimationFrame(updateNavigation);
   </script>
 </body>
 </html>
