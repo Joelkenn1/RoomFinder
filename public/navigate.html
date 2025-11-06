@@ -1,174 +1,239 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AR Guide Navigation</title>
+  <title>Indoor AR Navigation</title>
   <style>
-    body { margin: 0; overflow: hidden; font-family: sans-serif; }
-    #info {
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: sans-serif;
+    }
+    video {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      object-fit: cover;
+      z-index: -1;
+    }
+    #arrow {
       position: absolute;
-      top: 10px;
-      left: 10px;
+      top: 70%;
+      top: 64%;
+      left: 50%;
+      width: 250px;
+      height: 250px;
+      transform-origin: center;
+      transition: transform 0.3s ease;
+      z-index: 10;
+    }
+    #arrivalPrompt {
+      display: none;
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.7);
+      color: white;
+      font-size: 3em;
+      padding: 10px 20px;
+      border-radius: 8px;
+      z-index: 20;
+    }
+    #progressPrompt {
+      position: absolute;
+      top: 20%;
+      top: 13%;
+      left: 50%;
+      transform: translateX(-50%);
       background: rgba(0,0,0,0.6);
       color: white;
-      padding: 1rem;
-      border-radius: 8px;
-      font-size: 1rem;
-      z-index: 2;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 3em;
+      z-index: 20;
     }
-    #flipBtn {
+    #flipButton {
       position: absolute;
-      top: 10px;
-      right: 10px;
-      z-index: 2;
-      padding: 0.5rem 1rem;
-      background: #007bff;
+      top: 20px;
+      right: 20px;
+      z-index: 20;
+      padding: 10px 15px;
+      font-size: 3em;
+      background-color: #007bff;
       color: white;
       border: none;
-      border-radius: 6px;
-      font-size: 1rem;
+      border-radius: 5px;
       cursor: pointer;
     }
-    #fallbackVideo {
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      z-index: 1;
+    #flipButton:hover {
+      background-color: #0056b3;
+    }
+
+    #motionOverlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0,0,0,0.85);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+
+    #motionButton {
+      font-size: 4rem;
+      padding: 1rem 2rem;
+      width: 50vw;
+      height: auto;
+      background-color: rgba(128, 128, 128, 0.5);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(0,0,0,0.3);
+      animation: fadeIn 3s forwards;
+    }
+
+    @keyframes fadeIn {
+      to { opacity: 1; }
     }
   </style>
 </head>
 <body>
-  <div id="info">Initializing AR navigation...</div>
-  <button id="flipBtn" style="display:none;">Flip Camera</button>
-  <video id="fallbackVideo" autoplay muted playsinline style="display:none;"></video>
+  <div id="motionOverlay">
+    <button id="motionButton" onclick="enableMotion()">Enable Motion</button>
+  </div>
 
-  <script type="module">
-    import * as THREE from 'https://cdn.skypack.dev/three';
-    import { ARButton } from 'https://cdn.skypack.dev/three/examples/jsm/webxr/ARButton.js';
+  <video id="camera" autoplay playsinline></video>
+  <img id="arrow" src="arrow.png" alt="Arrow">
+  <div id="arrivalPrompt">You've arrived at your classroom!</div>
+  <div id="progressPrompt">Calculating progress...</div>
+  <button id="flipButton" onclick="flipCamera()">Flip Camera</button>
 
-    const urlParams = new URLSearchParams(window.location.search);
-    const campus = urlParams.get('campus');
-    const building = urlParams.get('building');
-    const destination = urlParams.get('destination');
+  <script>
+    const ARRIVAL_RADIUS = 1.5;
+
+    const arrow = document.getElementById('arrow');
+    const arrivalPrompt = document.getElementById('arrivalPrompt');
+    const progressPrompt = document.getElementById('progressPrompt');
+    const camera = document.getElementById('camera');
 
     const maps = {
       MainCampus: {
         EngineeringHall: {
-          Room101: new THREE.Vector3(0, 0, -2),
-          Room102: new THREE.Vector3(1, 0, -4),
-          Lobby:   new THREE.Vector3(2, 0, -6)
+          Room101: { x: 10, y: 5 },
+          Room102: { x: 12, y: 5 },
+          Room201: { x: 10, y: 10 },
+          Room202: { x: 12, y: 10 },
+          Lobby: { x: 5, y: 2 },
+          Entrance: { x: 0, y: 0 }
+        },
+        Library: {
+          Room301: { x: 8, y: 3 },
+          Room302: { x: 9, y: 6 },
+          Room100: { x: 0, y: 10 },
+          Entrance: { x: 0, y: 0 }
+        }
+      },
+      ArmstrongCampus: {
+        ScienceCenter: {
+          Room401: { x: 15, y: 10 },
+          Room402: { x: 17, y: 12 },
+          Entrance: { x: 0, y: 0 }
         }
       }
     };
 
-    const destCoords = maps[campus]?.[building]?.[destination];
-    if (!destCoords) {
-      document.getElementById('info').textContent = "Destination not found.";
-      throw new Error("Invalid destination");
+    function normalize(str) {
+      return str?.trim();
     }
 
-    let camera, scene, renderer;
-    let guide;
-    let guideSpawned = false;
-    const ARRIVAL_RADIUS = 0.5;
-    const FOLLOW_RADIUS = 3;
+    const params = new URLSearchParams(window.location.search);
+    const campus = normalize(params.get("campus"));
+    const building = normalize(params.get("building"));
+    const startRoom = normalize(params.get("start"));
+    const destRoom = normalize(params.get("dest"));
 
-    // Check for WebXR support
-    if (!navigator.xr || !navigator.xr.isSessionSupported) {
-      showFallback();
-    } else {
-      navigator.xr.isSessionSupported('immersive-ar').then(supported => {
-        if (!supported) showFallback();
-        else initAR();
-      });
+    const buildingMap = maps?.[campus]?.[building];
+    const startCoords = buildingMap?.[startRoom];
+    const destCoords = buildingMap?.[destRoom];
+
+    if (!startCoords || !destCoords) {
+      alert("Invalid campus, building, or room selection.");
     }
 
-    function showFallback() {
-      document.getElementById('info').textContent =
-        "AR navigation is not supported on this device. Using fallback camera mode.";
-      document.getElementById('flipBtn').style.display = 'block';
-      document.getElementById('fallbackVideo').style.display = 'block';
-      startFallbackCamera('environment');
-
-      let currentFacing = 'environment';
-      document.getElementById('flipBtn').addEventListener('click', () => {
-        currentFacing = currentFacing === 'environment' ? 'user' : 'environment';
-        startFallbackCamera(currentFacing);
-      });
+    let usingRearCamera = true;
+    function startCamera(facingMode) {
+      navigator.mediaDevices.getUserMedia({ video: { facingMode } })
+        .then(stream => camera.srcObject = stream)
+        .catch(err => alert("Camera access failed: " + err.message));
     }
 
-    function startFallbackCamera(facingMode) {
-      navigator.mediaDevices.getUserMedia({
-        video: { facingMode }
-      }).then(stream => {
-        const video = document.getElementById('fallbackVideo');
-        video.srcObject = stream;
-      }).catch(err => {
-        document.getElementById('info').textContent = "Camera access failed: " + err.message;
-      });
+    function flipCamera() {
+      usingRearCamera = !usingRearCamera;
+      const mode = usingRearCamera ? { exact: "environment" } : "user";
+      startCamera(mode);
     }
 
-    function initAR() {
-      scene = new THREE.Scene();
-      camera = new THREE.PerspectiveCamera();
+    let userPosition = { ...startCoords };
+    let deviceHeading = 0;
+    let previousDistance = Math.hypot(destCoords.x - userPosition.x, destCoords.y - userPosition.y);
+    let currentBearing = 0;
 
-      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      renderer.xr.enabled = true;
-      document.body.appendChild(renderer.domElement);
-      document.body.appendChild(ARButton.createButton(renderer));
-
-      const destMarker = new THREE.Mesh(
-        new THREE.SphereGeometry(0.2, 16, 16),
-        new THREE.MeshBasicMaterial({ color: 'green' })
-      );
-      destMarker.position.copy(destCoords);
-      scene.add(destMarker);
-
-      animate();
-    }
-
-    function spawnGuide(userPos) {
-      guide = new THREE.Mesh(
-        new THREE.SphereGeometry(0.15, 16, 16),
-        new THREE.MeshBasicMaterial({ color: 'yellow' })
-      );
-      guide.position.copy(userPos);
-      scene.add(guide);
-    }
-
-    function updateGuide(userPos) {
-      const distanceToUser = userPos.distanceTo(guide.position);
-      const distanceToDest = guide.position.distanceTo(destCoords);
-
-      if (distanceToUser < FOLLOW_RADIUS && distanceToDest > ARRIVAL_RADIUS) {
-        const direction = new THREE.Vector3().subVectors(destCoords, guide.position).normalize();
-        guide.position.addScaledVector(direction, 0.01);
+    function handleOrientation(e) {
+      if (e.alpha !== null) {
+        deviceHeading = e.alpha;
       }
-
-      const status = distanceToDest < ARRIVAL_RADIUS
-        ? "You've arrived at your destination!"
-        : `Follow the guide — ${distanceToDest.toFixed(2)}m to go`;
-
-      document.getElementById('info').textContent = status;
     }
 
-    function animate() {
-      renderer.setAnimationLoop(() => {
-        renderer.render(scene, camera);
+    function enableMotion() {
+      const overlay = document.getElementById('motionOverlay');
+      overlay.style.display = 'none';
 
-        const userPos = new THREE.Vector3().setFromMatrixPosition(camera.matrixWorld);
-
-        if (!guideSpawned) {
-          spawnGuide(userPos);
-          guideSpawned = true;
-        }
-
-        updateGuide(userPos);
-      });
+      if (typeof DeviceMotionEvent?.requestPermission === 'function') {
+        DeviceMotionEvent.requestPermission()
+          .then(response => {
+            if (response === 'granted') {
+              window.addEventListener('deviceorientation', handleOrientation);
+              requestAnimationFrame(updateNavigation);
+            } else {
+              alert("Motion access denied. Navigation may not work properly.");
+            }
+          })
+          .catch(err => {
+            console.error("Motion permission error:", err);
+          });
+      } else {
+        window.addEventListener('deviceorientation', handleOrientation);
+        requestAnimationFrame(updateNavigation);
+      }
     }
+
+    function updateNavigation() {
+      const dx = destCoords.x - userPosition.x;
+      const dy = destCoords.y - userPosition.y;
+      currentBearing = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
+
+      const relativeRotation = (currentBearing - deviceHeading + 360) % 360;
+      arrow.style.transform = `translate(-50%, -50%) rotate(${relativeRotation}deg)`;
+
+      const distance = Math.hypot(dx, dy);
+      progressPrompt.textContent = `You're ${distance.toFixed(1)} units away from ${destRoom}`;
+
+      arrivalPrompt.style.display = (distance < ARRIVAL_RADIUS) ? 'block' : 'none';
+
+      previousDistance = distance;
+      requestAnimationFrame(updateNavigation);
+    }
+
+    // ✅ Start camera immediately on page load
+    window.addEventListener('load', () => {
+      startCamera({ exact: "environment" });
+    });
   </script>
 </body>
 </html>
