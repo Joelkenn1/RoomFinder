@@ -118,14 +118,23 @@
     vr-mode-ui="enabled: false" 
     renderer="antialias: true; alpha: true;"
     device-orientation-permission-ui="enabled: false">
-    <a-entity id="camera" camera look-controls="touchEnabled: false">
+    <!-- <a-entity id="camera" camera look-controls="touchEnabled: false">
       <a-entity id="arrow3d"
         geometry="primitive: cone; radiusBottom: 0.15; height: 0.5"
         material="color: red"
         position="0 -0.3 -1.5"
         animation="property: position; dir: alternate; dur: 1000; easing: easeInOutSine; to: 0 -0.25 -1.5; loop: true">
       </a-entity>
+    </a-entity> -->
+    <a-entity id="camera" camera look-controls="touchEnabled: false"></a-entity>
+
+    <!-- Arrow now independent from the camera -->
+    <a-entity id="arrow3d"
+      geometry="primitive: cone; radiusBottom: 0.15; height: 0.5"
+      material="color: red"
+      position="0 0 -3">
     </a-entity>
+
   </a-scene>
 
   <script>
@@ -254,50 +263,61 @@
     // -----------------------
     // Arrow navigation logic
     // -----------------------
-    function updateArrow() {
-      time += 0.016;
-
-      if (!navigationReady) {
-        progressPrompt.textContent = "Loading navigation...";
-        requestAnimationFrame(updateArrow);
-        return;
-      }
-
-      const dx = destCoords.x - arrowPos.x;
-      const dy = destCoords.y - arrowPos.y;
-      const distToDest = Math.hypot(dx, dy);
-
-      const ux = arrowPos.x - userPosition.x;
-      const uy = arrowPos.y - userPosition.y;
-      const distToUser = Math.hypot(ux, uy);
-
-      if (distToUser > MAX_ARROW_DISTANCE) arrowTooFar = true;
-      else if (distToUser < MIN_ARROW_DISTANCE) arrowTooFar = false;
-
-      if (!arrowTooFar && distToDest > ARRIVAL_RADIUS) {
-        const targetAngle = Math.atan2(dy, dx);
-        const moveStep = Math.min(MOVE_SPEED, distToDest);
-        arrowPos.x += Math.cos(targetAngle) * moveStep;
-        arrowPos.y += Math.sin(targetAngle) * moveStep;
-        arrow3d.object3D.rotation.y = -targetAngle;
-      }
-
-      const bobY = -0.3 + Math.sin(time * BOB_SPEED) * BOB_AMPLITUDE;
-      const visibleDepth = Math.min(distToDest * 0.3 + 0.8, 3.0);
-      arrow3d.setAttribute("position", `0 ${bobY.toFixed(2)} ${-visibleDepth.toFixed(2)}`);
-
-      let proximity = "Far";
-      if (distToDest < 2) proximity = "Close";
-      else if (distToDest < 5) proximity = "Near";
-      progressPrompt.textContent = `${proximity} (${distToDest.toFixed(1)}m)`;
-
-      if (distToDest < ARRIVAL_RADIUS) {
-        arrivalPrompt.style.display = "block";
-        progressPrompt.textContent = `Arrived at ${destinationName}`;
-      }
-
+  function updateArrow() {
+    time += 0.016;
+  
+    if (!navigationReady) {
+      progressPrompt.textContent = "Loading navigation...";
       requestAnimationFrame(updateArrow);
+      return;
     }
+  
+    const dx = destCoords.x - arrowPos.x;
+    const dy = destCoords.y - arrowPos.y;
+    const distToDest = Math.hypot(dx, dy);
+  
+    // Compute direction and movement
+    const angle = Math.atan2(dy, dx);
+  
+    // Bobbing motion (small up/down float)
+    const bobY = Math.sin(time * BOB_SPEED) * BOB_AMPLITUDE;
+  
+    // Measure how far the arrow has visually drifted from user (Z-depth)
+    const arrowZ = arrow3d.object3D.position.z;
+  
+    // Keep the arrow close to camera (not off-screen)
+    let canMoveForward = arrowZ > -MAX_ARROW_DISTANCE;
+  
+    // Move arrow gradually toward destination (only if not too far)
+    if (distToDest > ARRIVAL_RADIUS && canMoveForward) {
+      const moveStep = Math.min(MOVE_SPEED, distToDest);
+      arrowPos.x += Math.cos(angle) * moveStep;
+      arrowPos.y += Math.sin(angle) * moveStep;
+    }
+  
+    // Adjust arrow’s visible placement in camera view
+    // The closer you are, the nearer it stays; it stops at max visible depth
+    const visibleDepth = Math.min(distToDest * 0.2 + 1.0, MAX_ARROW_DISTANCE);
+    arrow3d.object3D.position.set(0, bobY - 0.3, -visibleDepth);
+  
+    // Rotate arrow to always face the destination (adjusted by device heading)
+    arrow3d.object3D.rotation.y = -angle + THREE.MathUtils.degToRad(deviceHeading || 0);
+  
+    // Update proximity label
+    let proximity = "Far";
+    if (distToDest < 2) proximity = "Close";
+    else if (distToDest < 5) proximity = "Near";
+    progressPrompt.textContent = `${proximity} (${distToDest.toFixed(1)}m)`;
+  
+    // Arrival check
+    if (distToDest < ARRIVAL_RADIUS) {
+      arrivalPrompt.style.display = "block";
+      progressPrompt.textContent = `Arrived at ${destinationName}`;
+    }
+  
+    requestAnimationFrame(updateArrow);
+  }
+
   </script>
 </body>
 </html>
