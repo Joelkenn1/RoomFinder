@@ -4,6 +4,7 @@
   <title>AR Room Finder</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
+  <!-- A-Frame -->
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 
   <style>
@@ -111,7 +112,12 @@
   <div id="progressPrompt">Loading navigation...</div>
   <div id="arrivalPrompt">You've arrived!</div>
 
-  <a-scene embedded vr-mode-ui="enabled: false" renderer="antialias: true; alpha: true;">
+  <!-- 👇 Disable A-Frame’s built-in permission UI -->
+  <a-scene 
+    embedded 
+    vr-mode-ui="enabled: false" 
+    renderer="antialias: true; alpha: true;"
+    device-orientation-permission-ui="enabled: false">
     <a-entity id="camera" camera look-controls="touchEnabled: false">
       <a-entity id="arrow3d"
         geometry="primitive: cone; radiusBottom: 0.15; height: 0.5"
@@ -124,9 +130,9 @@
 
   <script>
     const ARRIVAL_RADIUS = 1.5;
-    const MAX_ARROW_DISTANCE = 4.0;   // how far arrow can get from user
-    const MIN_ARROW_DISTANCE = 1.0;   // how close arrow must be before moving again
-    const MOVE_SPEED = 0.05;          // smooth forward speed
+    const MAX_ARROW_DISTANCE = 4.0;
+    const MIN_ARROW_DISTANCE = 1.0;
+    const MOVE_SPEED = 0.05;
     const BOB_SPEED = 2.0;
     const BOB_AMPLITUDE = 0.05;
 
@@ -136,13 +142,13 @@
     const destinationPrompt = document.getElementById("destinationPrompt");
     const video = document.getElementById("cameraFeed");
 
-    // -----------------------
-    //  Location data
-    // -----------------------
     function normalize(str) {
       return str?.trim();
     }
 
+    // -----------------------
+    // Map setup
+    // -----------------------
     const maps = {
       MainCampus: {
         EngineeringHall: {
@@ -186,7 +192,7 @@
     }
 
     // -----------------------
-    //  Tracking state
+    // Tracking state
     // -----------------------
     let deviceHeading = 0;
     let userPosition = { ...startCoords };
@@ -196,24 +202,12 @@
     let time = 0;
 
     // -----------------------
-    //  Camera + Motion setup
+    // Motion setup
     // -----------------------
-    async function initCamera() {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment" },
-          audio: false
-        });
-        video.srcObject = stream;
-      } catch (err) {
-        alert("Camera access failed: " + err.message);
-      }
-    }
-
     async function enableMotion() {
       const overlay = document.getElementById("motionOverlay");
 
-     if (typeof DeviceOrientationEvent?.requestPermission === "function") {
+      if (typeof DeviceOrientationEvent?.requestPermission === "function") {
         try {
           const orientPerm = await DeviceOrientationEvent.requestPermission();
           if (orientPerm !== "granted") {
@@ -228,7 +222,26 @@
 
       overlay.style.display = "none";
       await initCamera();
+
+      // ✅ Avoid double permission prompt
+      const scene = document.querySelector("a-scene");
+      if (scene && scene.renderer && scene.renderer.xr) {
+        scene.renderer.xr.enabled = true;
+      }
+
       startMotionTracking();
+    }
+
+    async function initCamera() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "environment" },
+          audio: false
+        });
+        video.srcObject = stream;
+      } catch (err) {
+        alert("Camera access failed: " + err.message);
+      }
     }
 
     function startMotionTracking() {
@@ -239,7 +252,7 @@
     }
 
     // -----------------------
-    //  Main arrow loop
+    // Arrow navigation logic
     // -----------------------
     function updateArrow() {
       time += 0.016;
@@ -254,19 +267,13 @@
       const dy = destCoords.y - arrowPos.y;
       const distToDest = Math.hypot(dx, dy);
 
-      // Check how far the arrow is from user
       const ux = arrowPos.x - userPosition.x;
       const uy = arrowPos.y - userPosition.y;
       const distToUser = Math.hypot(ux, uy);
 
-      // Decide if arrow can move
-      if (distToUser > MAX_ARROW_DISTANCE) {
-        arrowTooFar = true;
-      } else if (distToUser < MIN_ARROW_DISTANCE) {
-        arrowTooFar = false;
-      }
+      if (distToUser > MAX_ARROW_DISTANCE) arrowTooFar = true;
+      else if (distToUser < MIN_ARROW_DISTANCE) arrowTooFar = false;
 
-      // Move arrow forward toward destination if not too far from user
       if (!arrowTooFar && distToDest > ARRIVAL_RADIUS) {
         const targetAngle = Math.atan2(dy, dx);
         const moveStep = Math.min(MOVE_SPEED, distToDest);
@@ -275,18 +282,15 @@
         arrow3d.object3D.rotation.y = -targetAngle;
       }
 
-      // Bobbing and visible placement
       const bobY = -0.3 + Math.sin(time * BOB_SPEED) * BOB_AMPLITUDE;
       const visibleDepth = Math.min(distToDest * 0.3 + 0.8, 3.0);
       arrow3d.setAttribute("position", `0 ${bobY.toFixed(2)} ${-visibleDepth.toFixed(2)}`);
 
-      // Distance feedback
       let proximity = "Far";
       if (distToDest < 2) proximity = "Close";
       else if (distToDest < 5) proximity = "Near";
       progressPrompt.textContent = `${proximity} (${distToDest.toFixed(1)}m)`;
 
-      // Arrival check
       if (distToDest < ARRIVAL_RADIUS) {
         arrivalPrompt.style.display = "block";
         progressPrompt.textContent = `Arrived at ${destinationName}`;
