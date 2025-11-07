@@ -125,11 +125,11 @@
 
   <script>
     const ARRIVAL_RADIUS = 1.5;       // meters to destination considered "arrived"
-    const MAX_ARROW_DISTANCE = 3.0;   // how far arrow can move away from camera
+    const MAX_VISUAL_DEPTH = 3.0;   // how far arrow can move away from camera
     const ARROW_SPEED = 0.02;         // movement speed per frame
-    const ROTATE_SPEED = 0.05;        // turn smoothing factor
+    const ROTATE_SPEED = 0.1;        // turn smoothing factor
     const BOB_AMPLITUDE = 0.1;        // up/down motion
-    const BOB_SPEED = 2.5;            // how fast it bobs
+    const BOB_SPEED = 2.0;            // how fast it bobs
   
     const arrow3d = document.getElementById("arrow3d");
     const progressPrompt = document.getElementById("progressPrompt");
@@ -188,10 +188,7 @@
     }
 
     
-    let userPosition = { ...startCoords };
-    let arrowPosition = { x: startCoords.x, y: startCoords.y };
-    let targetAngle = 0;
-    let currentAngle = 0;
+    let arrowPos = { ...startCoords }; // actual world position
     let time = 0;
 
     async function initCamera() {
@@ -228,47 +225,44 @@
     }
 
   function updateArrow() {
-    time += 0.016; // for smooth animation
+    time += 0.016;
 
-    // compute vector to destination
-    const dx = destCoords.x - arrowPosition.x;
-    const dy = destCoords.y - arrowPosition.y;
-    const distance = Math.hypot(dx, dy);
+    const dx = destCoords.x - arrowPos.x;
+    const dy = destCoords.y - arrowPos.y;
+    const dist = Math.hypot(dx, dy);
 
-    if (distance < ARRIVAL_RADIUS) {
-      progressPrompt.textContent = "Close (0.0m)";
+    if (dist < ARRIVAL_RADIUS) {
       arrivalPrompt.style.display = "block";
+      progressPrompt.textContent = `Arrived at ${destinationName}`;
       return;
+    } else {
+      arrivalPrompt.style.display = "none";
     }
 
-    arrivalPrompt.style.display = "none";
+    // Calculate target angle toward destination
+    const targetAngle = Math.atan2(dy, dx);
 
-    // compute target rotation toward destination
-    const desiredAngle = Math.atan2(dy, dx);
-    const diff = ((desiredAngle - targetAngle + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
-    targetAngle += diff * ROTATE_SPEED;
+    // Move gradually toward destination
+    const moveStep = Math.min(MOVE_SPEED, dist);
+    arrowPos.x += Math.cos(targetAngle) * moveStep;
+    arrowPos.y += Math.sin(targetAngle) * moveStep;
 
-    // move arrow gradually toward destination
-    const moveStep = Math.min(ARROW_SPEED, distance);
-    arrowPosition.x += Math.cos(targetAngle) * moveStep;
-    arrowPosition.y += Math.sin(targetAngle) * moveStep;
+    // Compute proximity feedback
+    let proximity = "Far";
+    if (dist < 2) proximity = "Close";
+    else if (dist < 5) proximity = "Near";
 
-    // compute bobbing height
+    progressPrompt.textContent = `${proximity} (${dist.toFixed(1)}m)`;
+
+    // Visual arrow stays within range of camera
+    const visualDepth = Math.min(dist, MAX_VISUAL_DEPTH);
+
+    // Bobbing animation
     const bobY = -0.3 + Math.sin(time * BOB_SPEED) * BOB_AMPLITUDE;
 
-    // compute forward distance limit (visual depth)
-    const zDist = Math.min(distance, MAX_ARROW_DISTANCE);
-
-    // update 3D arrow position and rotation
-    arrow3d.setAttribute("position", `0 ${bobY.toFixed(2)} -${zDist.toFixed(2)}`);
+    // Apply visual transform
+    arrow3d.setAttribute("position", `0 ${bobY.toFixed(2)} -${visualDepth.toFixed(2)}`);
     arrow3d.object3D.rotation.set(0, -targetAngle, 0);
-
-    // textual proximity feedback
-    let proximity = "Far";
-    if (distance < 2) proximity = "Close";
-    else if (distance < 5) proximity = "Near";
-
-    progressPrompt.textContent = `${proximity} (${distance.toFixed(1)}m)`;
 
     requestAnimationFrame(updateArrow);
   }
