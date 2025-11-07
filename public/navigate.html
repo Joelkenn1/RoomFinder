@@ -2,9 +2,6 @@
 <html>
 <head>
   <title>AR Room Finder</title>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-
   <!-- A-Frame -->
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 
@@ -21,6 +18,7 @@
       width: 100vw;
       height: 100vh;
       overflow: hidden;
+      z-index: 1;
     }
 
     #progressPrompt {
@@ -93,21 +91,22 @@
     <button id="motionButton" onclick="enableMotion()">Enable Motion</button>
   </div>
 
+  <!-- AR Scene -->
   <a-scene
     embedded
-    renderer="colorManagement: true, physicallyCorrectLights"
     vr-mode-ui="enabled: false"
-    device-orientation-permission-ui="enabled: true">
-
+    renderer="antialias: true; alpha: true;"
+    device-orientation-permission-ui="enabled: false">
+    
     <!-- Camera -->
-    <a-camera id="camera" look-controls position="0 0 0"></a-camera>
+    <a-camera id="camera" look-controls="touchEnabled: false" position="0 0 0"></a-camera>
 
-    <!-- 3D Arrow (red cone) -->
+    <!-- 3D Arrow -->
     <a-entity id="arrow3d"
-              geometry="primitive: cone; radiusBottom: 0.3; height: 1"
-              material="color: red"
-              position="0 -0.5 -3"
-              rotation="0 0 0">
+      geometry="primitive: cone; radiusBottom: 0.3; height: 1"
+      material="color: red"
+      position="0 -0.5 -2"
+      animation="property: position; dir: alternate; dur: 1000; easing: easeInOutSine; to: 0 -0.3 -2; loop: true">
     </a-entity>
   </a-scene>
 
@@ -117,7 +116,7 @@
 
   <script>
     const ARRIVAL_RADIUS = 1.5;
-    const STEP_LENGTH = 0.75; // average step length in meters
+    const STEP_LENGTH = 0.75; 
     const STEP_THRESHOLD = 1.2;
     const STEP_COOLDOWN = 400;
 
@@ -155,22 +154,36 @@
     let accelBuffer = [];
     const bufferSize = 10;
 
-    function enableMotion() {
+    // ✅ Fix for iOS camera white screen issue
+    async function initCamera() {
+      try {
+        await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+        console.log("Camera stream initialized successfully.");
+      } catch (err) {
+        alert("Camera access failed: " + err.message);
+      }
+    }
+
+    async function enableMotion() {
       document.getElementById('motionOverlay').style.display = 'none';
+      await initCamera();
 
       if (typeof DeviceMotionEvent?.requestPermission === 'function') {
-        Promise.all([
-          DeviceMotionEvent.requestPermission(),
-          DeviceOrientationEvent.requestPermission()
-        ]).then(responses => {
-          if (responses.every(r => r === 'granted')) {
+        try {
+          const [motionPerm, orientPerm] = await Promise.all([
+            DeviceMotionEvent.requestPermission(),
+            DeviceOrientationEvent.requestPermission()
+          ]);
+          if (motionPerm === 'granted' && orientPerm === 'granted') {
             window.addEventListener('devicemotion', handleMotion);
             window.addEventListener('deviceorientation', handleOrientation);
             requestAnimationFrame(updateArrow);
           } else {
-            alert('Motion permission denied.');
+            alert("Permission denied.");
           }
-        });
+        } catch (err) {
+          alert("Motion permission error: " + err);
+        }
       } else {
         window.addEventListener('devicemotion', handleMotion);
         window.addEventListener('deviceorientation', handleOrientation);
@@ -217,7 +230,7 @@
       const bearing = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
       const relative = (bearing - deviceHeading + 360) % 360;
 
-      // Rotate 3D arrow toward destination
+      // Rotate arrow smoothly toward target
       arrow3d.setAttribute('rotation', `0 ${relative} 0`);
 
       progressPrompt.textContent = `${proximity} to ${dest} (${distance.toFixed(1)}m)`;
