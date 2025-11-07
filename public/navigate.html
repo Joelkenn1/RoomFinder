@@ -125,13 +125,28 @@
     const arrivalPrompt = document.getElementById('arrivalPrompt');
     const arrow3d = document.getElementById('arrow3d');
 
-    // Example map data
-    const maps = {
+        const maps = {
       MainCampus: {
         EngineeringHall: {
-          Entrance: { x: 0, y: 0 },
           Room101: { x: 10, y: 5 },
-          Room201: { x: 15, y: 10 }
+          Room102: { x: 12, y: 5 },
+          Room201: { x: 10, y: 10 },
+          Room202: { x: 12, y: 10 },
+          Lobby: { x: 5, y: 2 },
+          Entrance: { x: 0, y: 0 }
+        },
+        Library: {
+          Room301: { x: 8, y: 3 },
+          Room302: { x: 9, y: 6 },
+          Room100: { x: 0, y: 10 },
+          Entrance: { x: 0, y: 0 }
+        }
+      },
+      ArmstrongCampus: {
+        ScienceCenter: {
+          Room401: { x: 15, y: 10 },
+          Room402: { x: 17, y: 12 },
+          Entrance: { x: 0, y: 0 }
         }
       }
     };
