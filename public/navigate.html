@@ -60,6 +60,7 @@
 
     #destinationPrompt {
       position: absolute;
+      white-space: no-wrap;
       top: 3%;
       left: 50%;
       transform: translateX(-50%);
@@ -67,13 +68,13 @@
       color: white;
       padding: 8px 16px;
       border-radius: 6px;
-      font-size: 1.3rem;
+      font-size: 1.25rem;
       z-index: 5;
     }
 
     #progressPrompt {
       position: absolute;
-      top: 10%;
+      top: 18%;
       left: 50%;
       transform: translateX(-50%);
       background: rgba(0,0,0,0.6);
@@ -123,23 +124,24 @@
   </a-scene>
 
   <script>
-    const ARRIVAL_RADIUS = 1.5;
-    const STEP_LENGTH = 0.75;
-    const STEP_THRESHOLD = 1.8;
-    const STEP_COOLDOWN = 600;
-    const bufferSize = 15;
-    
-
+    const ARRIVAL_RADIUS = 1.5;       // meters to destination considered "arrived"
+    const MAX_ARROW_DISTANCE = 3.0;   // how far arrow can move away from camera
+    const ARROW_SPEED = 0.02;         // movement speed per frame
+    const ROTATE_SPEED = 0.05;        // turn smoothing factor
+    const BOB_AMPLITUDE = 0.1;        // up/down motion
+    const BOB_SPEED = 2.5;            // how fast it bobs
+  
     const arrow3d = document.getElementById("arrow3d");
     const progressPrompt = document.getElementById("progressPrompt");
     const arrivalPrompt = document.getElementById("arrivalPrompt");
     const destinationPrompt = document.getElementById("destinationPrompt");
     const video = document.getElementById("cameraFeed");
-
-    // Load coordinates from previous page
+  
+    // --- Campus map and params ---
     function normalize(str) {
       return str?.trim();
     }
+
 
     const maps = {
       MainCampus: {
@@ -185,32 +187,33 @@
       destinationPrompt.textContent = `Destination: ${destinationName}`;
     }
 
-    let accelBuffer = [];
-    let lastStepTime = 0;
-    let deviceHeading = 0;
+    
     let userPosition = { ...startCoords };
+    let arrowPosition = { x: startCoords.x, y: startCoords.y };
+    let targetAngle = 0;
+    let currentAngle = 0;
+    let time = 0;
 
     async function initCamera() {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment" },
-          audio: false
-        });
-        video.srcObject = stream;
-      } catch (err) {
-        alert("Camera access failed: " + err.message);
-      }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" },
+        audio: false
+      });
+      video.srcObject = stream;
+    } catch (err) {
+      alert("Camera access failed: " + err.message);
     }
+  }
 
     async function enableMotion() {
       const overlay = document.getElementById("motionOverlay");
-
-      if (typeof DeviceMotionEvent?.requestPermission === "function") {
+  
+      if (typeof DeviceOrientationEvent?.requestPermission === "function") {
         try {
-          const motionPerm = await DeviceMotionEvent.requestPermission();
           const orientPerm = await DeviceOrientationEvent.requestPermission();
-          if (motionPerm !== "granted" || orientPerm !== "granted") {
-            alert("Motion/orientation permission denied.");
+          if (orientPerm !== "granted") {
+            alert("Orientation permission denied.");
             return;
           }
         } catch (err) {
@@ -218,78 +221,57 @@
           return;
         }
       }
-
+  
       overlay.style.display = "none";
       await initCamera();
-      startMotionTracking();
-    }
-
-    function startMotionTracking() {
-      window.addEventListener("devicemotion", handleMotion);
-      window.addEventListener("deviceorientation", handleOrientation);
       requestAnimationFrame(updateArrow);
     }
 
-    function handleOrientation(e) {
-      if (e.alpha !== null) deviceHeading = e.alpha;
+  function updateArrow() {
+    time += 0.016; // for smooth animation
+
+    // compute vector to destination
+    const dx = destCoords.x - arrowPosition.x;
+    const dy = destCoords.y - arrowPosition.y;
+    const distance = Math.hypot(dx, dy);
+
+    if (distance < ARRIVAL_RADIUS) {
+      progressPrompt.textContent = "Close (0.0m)";
+      arrivalPrompt.style.display = "block";
+      return;
     }
 
-    function handleMotion(e) {
-      const acc = e.accelerationIncludingGravity;
-      if (!acc) return;
+    arrivalPrompt.style.display = "none";
 
-      const magnitude = Math.sqrt(acc.x ** 2 + acc.y ** 2 + acc.z ** 2);
-      accelBuffer.push(magnitude);
-      if (accelBuffer.length > bufferSize) accelBuffer.shift();
+    // compute target rotation toward destination
+    const desiredAngle = Math.atan2(dy, dx);
+    const diff = ((desiredAngle - targetAngle + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+    targetAngle += diff * ROTATE_SPEED;
 
-      const avg = accelBuffer.reduce((a, b) => a + b, 0) / accelBuffer.length;
-      const now = Date.now();
+    // move arrow gradually toward destination
+    const moveStep = Math.min(ARROW_SPEED, distance);
+    arrowPosition.x += Math.cos(targetAngle) * moveStep;
+    arrowPosition.y += Math.sin(targetAngle) * moveStep;
 
-      const baseline = accelBuffer.slice(0, bufferSize - 3).reduce((a, b) => a + b, 0) / (bufferSize - 3);
-      if ((avg - baseline) > 0.5 && avg > STEP_THRESHOLD && now - lastStepTime > STEP_COOLDOWN) {
-        lastStepTime = now;
-        takeStep();
-      }
-    }
+    // compute bobbing height
+    const bobY = -0.3 + Math.sin(time * BOB_SPEED) * BOB_AMPLITUDE;
 
-    function takeStep() {
-      // Compute direction vector toward destination
-      const dx = destCoords.x - userPosition.x;
-      const dy = destCoords.y - userPosition.y;
-      const bearingToDest = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
+    // compute forward distance limit (visual depth)
+    const zDist = Math.min(distance, MAX_ARROW_DISTANCE);
 
-      // Determine direction difference between user heading and destination bearing
-      const diff = ((bearingToDest - deviceHeading + 540) % 360) - 180;
+    // update 3D arrow position and rotation
+    arrow3d.setAttribute("position", `0 ${bobY.toFixed(2)} -${zDist.toFixed(2)}`);
+    arrow3d.object3D.rotation.set(0, -targetAngle, 0);
 
-      // Move user along that direction
-      const rad = deviceHeading * Math.PI / 180;
+    // textual proximity feedback
+    let proximity = "Far";
+    if (distance < 2) proximity = "Close";
+    else if (distance < 5) proximity = "Near";
 
-      // If user facing roughly toward destination, move toward it; otherwise move away
-      const moveFactor = Math.cos(diff * Math.PI / 180);
+    progressPrompt.textContent = `${proximity} (${distance.toFixed(1)}m)`;
 
-      userPosition.x += Math.cos(rad) * STEP_LENGTH * moveFactor;
-      userPosition.y += Math.sin(rad) * STEP_LENGTH * moveFactor;
-    }
-
-    function updateArrow() {
-      const dx = destCoords.x - userPosition.x;
-      const dy = destCoords.y - userPosition.y;
-      const distance = Math.hypot(dx, dy);
-
-      const bearingToDest = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
-      const relativeBearing = (bearingToDest - deviceHeading + 360) % 360;
-
-      arrow3d.object3D.rotation.set(0, THREE.MathUtils.degToRad(relativeBearing), 0);
-
-      let proximity = "Far";
-      if (distance < 2) proximity = "Close";
-      else if (distance < 5) proximity = "Near";
-
-      progressPrompt.textContent = `${proximity} (${distance.toFixed(1)}m)`;
-      arrivalPrompt.style.display = (distance < ARRIVAL_RADIUS) ? "block" : "none";
-
-      requestAnimationFrame(updateArrow);
-    }
+    requestAnimationFrame(updateArrow);
+  }
   </script>
 </body>
 </html>
