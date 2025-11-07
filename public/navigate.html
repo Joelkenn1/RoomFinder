@@ -213,12 +213,11 @@
     async function enableMotion() {
       const overlay = document.getElementById("motionOverlay");
 
-      if (typeof DeviceMotionEvent?.requestPermission === "function") {
+     if (typeof DeviceOrientationEvent?.requestPermission === "function") {
         try {
-          const motionPerm = await DeviceMotionEvent.requestPermission();
           const orientPerm = await DeviceOrientationEvent.requestPermission();
-          if (motionPerm !== "granted" || orientPerm !== "granted") {
-            alert("Motion/orientation permission denied.");
+          if (orientPerm !== "granted") {
+            alert("Orientation permission denied.");
             return;
           }
         } catch (err) {
