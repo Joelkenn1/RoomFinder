@@ -128,12 +128,7 @@
     const STEP_THRESHOLD = 1.8;
     const STEP_COOLDOWN = 600;
     const bufferSize = 15;
-
-    let deviceHeading = 0;
-    let userPosition = { x: 0, y: 0 };
-    let destCoords = { x: 0, y: 0 };
-    let destinationName = "";
-    let startCoords = { x: 0, y: 0 };
+    
 
     const arrow3d = document.getElementById("arrow3d");
     const progressPrompt = document.getElementById("progressPrompt");
@@ -178,19 +173,22 @@
     const destRoom = normalize(params.get("dest"));
 
     const buildingMap = maps?.[campus]?.[building];
-    startCoords = buildingMap?.[startRoom];
-    destCoords = buildingMap?.[destRoom];
-    destinationName = destRoom ? destRoom.toUpperCase() : "Unknown";
+    const startCoords = buildingMap?.[startRoom];
+    const destCoords = buildingMap?.[destRoom];
+    const destinationName = destRoom.toUpperCase();
 
+  
+    
     if (!startCoords || !destCoords) {
       alert("Invalid campus, building, or room selection.");
     } else {
-      userPosition = { ...startCoords };
       destinationPrompt.textContent = `Destination: ${destinationName}`;
     }
 
     let accelBuffer = [];
     let lastStepTime = 0;
+    let deviceHeading = 0;
+    let userPosition = { ...startCoords };
 
     async function initCamera() {
       try {
