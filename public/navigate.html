@@ -2,65 +2,39 @@
 <html>
 <head>
   <title>AR Room Finder</title>
-  <!-- A-Frame -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- A-Frame -->
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 
   <style>
-    body {
+    html, body {
       margin: 0;
+      padding: 0;
       overflow: hidden;
-      font-family: sans-serif;
+      height: 100%;
+      width: 100%;
+      background-color: black;
     }
 
     a-scene {
       position: fixed;
-      top: 0; left: 0;
+      top: 0;
+      left: 0;
       width: 100vw;
       height: 100vh;
-      overflow: hidden;
       z-index: 1;
     }
 
-    #progressPrompt {
-      position: absolute;
-      top: 13%;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(0,0,0,0.6);
-      color: white;
-      padding: 8px 16px;
-      border-radius: 6px;
-      font-size: 3em;
-      z-index: 20;
-    }
-
-    #arrivalPrompt {
-      display: none;
-      position: absolute;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(0,0,0,0.7);
-      color: white;
-      font-size: 3em;
-      padding: 10px 20px;
-      border-radius: 8px;
-      z-index: 20;
-    }
-
-    #flipButton {
-      position: absolute;
-      top: 20px;
-      right: 20px;
-      z-index: 20;
-      padding: 10px 15px;
-      font-size: 3em;
-      background-color: #007bff;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
+    /* Camera feed container */
+    video#cameraFeed {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      object-fit: cover; /* makes it fullscreen without stretching */
+      z-index: 0;
     }
 
     #motionOverlay {
@@ -71,28 +45,58 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      z-index: 100;
+      z-index: 10;
     }
 
     #motionButton {
-      font-size: 4rem;
+      font-size: 2rem;
       padding: 1rem 2rem;
-      width: 50vw;
-      background-color: rgba(128, 128, 128, 0.5);
+      background-color: rgba(0,0,0,0.5);
       color: white;
-      border: none;
+      border: 2px solid white;
       border-radius: 8px;
       cursor: pointer;
+    }
+
+    #progressPrompt {
+      position: absolute;
+      top: 10%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.6);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 1.2rem;
+      z-index: 5;
+    }
+
+    #arrivalPrompt {
+      display: none;
+      position: absolute;
+      bottom: 10%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.7);
+      color: white;
+      font-size: 1.2rem;
+      padding: 10px 20px;
+      border-radius: 8px;
+      z-index: 5;
     }
   </style>
 </head>
 
 <body>
+  <!-- Fullscreen camera feed -->
+  <video id="cameraFeed" autoplay playsinline></video>
+
+  <!-- Motion permission overlay -->
   <div id="motionOverlay">
     <button id="motionButton" onclick="enableMotion()">Enable Motion</button>
   </div>
 
-  <!-- AR Scene -->
+  <!-- A-Frame AR Scene -->
   <a-scene
     embedded
     vr-mode-ui="enabled: false"
@@ -102,109 +106,77 @@
     <!-- Camera -->
     <a-camera id="camera" look-controls="touchEnabled: false" position="0 0 0"></a-camera>
 
-    <!-- 3D Arrow -->
+    <!-- 3D AR Arrow -->
     <a-entity id="arrow3d"
-      geometry="primitive: cone; radiusBottom: 0.3; height: 1"
+      geometry="primitive: cone; radiusBottom: 0.2; height: 0.6"
       material="color: red"
       position="0 -0.5 -2"
-      animation="property: position; dir: alternate; dur: 1000; easing: easeInOutSine; to: 0 -0.3 -2; loop: true">
+      animation="property: position; dir: alternate; dur: 1000; easing: easeInOutSine; to: 0 -0.4 -2; loop: true">
     </a-entity>
   </a-scene>
 
   <div id="progressPrompt">Loading navigation...</div>
   <div id="arrivalPrompt">You've arrived!</div>
-  <button id="flipButton" onclick="flipCamera()">Flip</button>
 
   <script>
     const ARRIVAL_RADIUS = 1.5;
-    const STEP_LENGTH = 0.75; 
+    const STEP_LENGTH = 0.75;
     const STEP_THRESHOLD = 1.2;
     const STEP_COOLDOWN = 400;
 
     const progressPrompt = document.getElementById('progressPrompt');
     const arrivalPrompt = document.getElementById('arrivalPrompt');
     const arrow3d = document.getElementById('arrow3d');
+    const video = document.getElementById('cameraFeed');
 
-    const maps = {
-      MainCampus: {
-        EngineeringHall: {
-          Room101: { x: 10, y: 5 },
-          Room102: { x: 12, y: 5 },
-          Room201: { x: 10, y: 10 },
-          Room202: { x: 12, y: 10 },
-          Lobby: { x: 5, y: 2 },
-          Entrance: { x: 0, y: 0 }
-        },
-        Library: {
-          Room301: { x: 8, y: 3 },
-          Room302: { x: 9, y: 6 },
-          Room100: { x: 0, y: 10 },
-          Entrance: { x: 0, y: 0 }
-        }
-      },
-      ArmstrongCampus: {
-        ScienceCenter: {
-          Room401: { x: 15, y: 10 },
-          Room402: { x: 17, y: 12 },
-          Entrance: { x: 0, y: 0 }
-        }
-      }
-    };
-
-    // Parse query params
-    const params = new URLSearchParams(window.location.search);
-    const campus = params.get('campus');
-    const building = params.get('building');
-    const start = params.get('start');
-    const dest = params.get('dest');
-
-    const startCoords = maps?.[campus]?.[building]?.[start];
-    const destCoords = maps?.[campus]?.[building]?.[dest];
-    if (!startCoords || !destCoords) {
-      alert('Invalid location data.');
-    }
-
+    // Example positions
+    const destCoords = { x: 10, y: 5 };
+    let userPosition = { x: 0, y: 0 };
     let deviceHeading = 0;
-    let userPosition = { ...startCoords };
     let lastStepTime = 0;
     let accelBuffer = [];
     const bufferSize = 10;
 
-    // ✅ Fix for iOS camera white screen issue
     async function initCamera() {
       try {
-        await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-        console.log("Camera stream initialized successfully.");
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "environment" },
+          audio: false
+        });
+        video.srcObject = stream;
       } catch (err) {
         alert("Camera access failed: " + err.message);
       }
     }
 
     async function enableMotion() {
-      document.getElementById('motionOverlay').style.display = 'none';
-      await initCamera();
+      const overlay = document.getElementById('motionOverlay');
 
+      // ✅ Request permission immediately on click
       if (typeof DeviceMotionEvent?.requestPermission === 'function') {
         try {
-          const [motionPerm, orientPerm] = await Promise.all([
-            DeviceMotionEvent.requestPermission(),
-            DeviceOrientationEvent.requestPermission()
-          ]);
-          if (motionPerm === 'granted' && orientPerm === 'granted') {
-            window.addEventListener('devicemotion', handleMotion);
-            window.addEventListener('deviceorientation', handleOrientation);
-            requestAnimationFrame(updateArrow);
-          } else {
-            alert("Permission denied.");
+          const motionPerm = await DeviceMotionEvent.requestPermission();
+          const orientPerm = await DeviceOrientationEvent.requestPermission();
+
+          if (motionPerm !== 'granted' || orientPerm !== 'granted') {
+            alert('Motion/orientation permission denied.');
+            return;
           }
         } catch (err) {
-          alert("Motion permission error: " + err);
+          alert('Motion permission error: ' + err);
+          return;
         }
-      } else {
-        window.addEventListener('devicemotion', handleMotion);
-        window.addEventListener('deviceorientation', handleOrientation);
-        requestAnimationFrame(updateArrow);
       }
+
+      overlay.style.display = 'none';
+      await initCamera();
+      startMotionTracking();
+    }
+
+    function startMotionTracking() {
+      window.addEventListener('devicemotion', handleMotion);
+      window.addEventListener('deviceorientation', handleOrientation);
+      requestAnimationFrame(updateArrow);
     }
 
     function handleOrientation(e) {
@@ -215,11 +187,11 @@
       const acc = e.accelerationIncludingGravity;
       if (!acc) return;
 
-      const magnitude = Math.sqrt(acc.x**2 + acc.y**2 + acc.z**2);
+      const magnitude = Math.sqrt(acc.x ** 2 + acc.y ** 2 + acc.z ** 2);
       accelBuffer.push(magnitude);
       if (accelBuffer.length > bufferSize) accelBuffer.shift();
 
-      const avg = accelBuffer.reduce((a,b)=>a+b,0)/accelBuffer.length;
+      const avg = accelBuffer.reduce((a, b) => a + b, 0) / accelBuffer.length;
       const now = Date.now();
 
       if (avg > STEP_THRESHOLD && now - lastStepTime > STEP_COOLDOWN) {
@@ -246,17 +218,14 @@
       const bearing = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
       const relative = (bearing - deviceHeading + 360) % 360;
 
-      // Rotate arrow smoothly toward target
+      // Keep arrow rotation stable and centered
       arrow3d.setAttribute('rotation', `0 ${relative} 0`);
+      arrow3d.setAttribute('position', '0 -0.5 -2');
 
-      progressPrompt.textContent = `${proximity} to ${dest} (${distance.toFixed(1)}m)`;
+      progressPrompt.textContent = `${proximity} (${distance.toFixed(1)}m)`;
       arrivalPrompt.style.display = (distance < ARRIVAL_RADIUS) ? 'block' : 'none';
 
       requestAnimationFrame(updateArrow);
-    }
-
-    function flipCamera() {
-      alert("Camera flip not yet implemented for AR view.");
     }
   </script>
 </body>
