@@ -1,33 +1,41 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Indoor AR Navigation</title>
+  <title>AR Room Finder</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+
+  <!-- A-Frame -->
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+
   <style>
     body {
       margin: 0;
       overflow: hidden;
       font-family: sans-serif;
     }
-    video {
+
+    a-scene {
       position: fixed;
-      top: 0;
-      left: 0;
+      top: 0; left: 0;
       width: 100vw;
       height: 100vh;
-      object-fit: cover;
-      z-index: -1;
+      overflow: hidden;
     }
-    #arrow {
+
+    #progressPrompt {
       position: absolute;
-      top: 70%;
-      top: 64%;
+      top: 13%;
       left: 50%;
-      width: 250px;
-      height: 250px;
-      transform-origin: center;
-      transition: transform 0.3s ease;
-      z-index: 10;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.6);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 3em;
+      z-index: 20;
     }
+
     #arrivalPrompt {
       display: none;
       position: absolute;
@@ -41,19 +49,7 @@
       border-radius: 8px;
       z-index: 20;
     }
-    #progressPrompt {
-      position: absolute;
-      top: 20%;
-      top: 13%;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(0,0,0,0.6);
-      color: white;
-      padding: 8px 16px;
-      border-radius: 6px;
-      font-size: 3em;
-      z-index: 20;
-    }
+
     #flipButton {
       position: absolute;
       top: 20px;
@@ -67,16 +63,11 @@
       border-radius: 5px;
       cursor: pointer;
     }
-    #flipButton:hover {
-      background-color: #0056b3;
-    }
 
     #motionOverlay {
       position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
       background: rgba(0,0,0,0.85);
       display: flex;
       align-items: center;
@@ -88,152 +79,156 @@
       font-size: 4rem;
       padding: 1rem 2rem;
       width: 50vw;
-      height: auto;
       background-color: rgba(128, 128, 128, 0.5);
       color: white;
       border: none;
       border-radius: 8px;
       cursor: pointer;
-      box-shadow: 0 0 10px rgba(0,0,0,0.3);
-      animation: fadeIn 3s forwards;
-    }
-
-    @keyframes fadeIn {
-      to { opacity: 1; }
     }
   </style>
 </head>
+
 <body>
   <div id="motionOverlay">
     <button id="motionButton" onclick="enableMotion()">Enable Motion</button>
   </div>
 
-  <video id="camera" autoplay playsinline></video>
-  <img id="arrow" src="arrow.png" alt="Arrow">
-  <div id="arrivalPrompt">You've arrived at your classroom!</div>
-  <div id="progressPrompt">Calculating progress...</div>
-  <button id="flipButton" onclick="flipCamera()">Flip Camera</button>
+  <a-scene
+    embedded
+    renderer="colorManagement: true, physicallyCorrectLights"
+    vr-mode-ui="enabled: false"
+    device-orientation-permission-ui="enabled: true">
+
+    <!-- Camera -->
+    <a-camera id="camera" look-controls position="0 0 0"></a-camera>
+
+    <!-- 3D Arrow (red cone) -->
+    <a-entity id="arrow3d"
+              geometry="primitive: cone; radiusBottom: 0.3; height: 1"
+              material="color: red"
+              position="0 -0.5 -3"
+              rotation="0 0 0">
+    </a-entity>
+  </a-scene>
+
+  <div id="progressPrompt">Loading navigation...</div>
+  <div id="arrivalPrompt">You've arrived!</div>
+  <button id="flipButton" onclick="flipCamera()">Flip</button>
 
   <script>
     const ARRIVAL_RADIUS = 1.5;
+    const STEP_LENGTH = 0.75; // average step length in meters
+    const STEP_THRESHOLD = 1.2;
+    const STEP_COOLDOWN = 400;
 
-    const arrow = document.getElementById('arrow');
-    const arrivalPrompt = document.getElementById('arrivalPrompt');
     const progressPrompt = document.getElementById('progressPrompt');
-    const camera = document.getElementById('camera');
+    const arrivalPrompt = document.getElementById('arrivalPrompt');
+    const arrow3d = document.getElementById('arrow3d');
 
+    // Example map data
     const maps = {
       MainCampus: {
         EngineeringHall: {
+          Entrance: { x: 0, y: 0 },
           Room101: { x: 10, y: 5 },
-          Room102: { x: 12, y: 5 },
-          Room201: { x: 10, y: 10 },
-          Room202: { x: 12, y: 10 },
-          Lobby: { x: 5, y: 2 },
-          Entrance: { x: 0, y: 0 }
-        },
-        Library: {
-          Room301: { x: 8, y: 3 },
-          Room302: { x: 9, y: 6 },
-          Room100: { x: 0, y: 10 },
-          Entrance: { x: 0, y: 0 }
-        }
-      },
-      ArmstrongCampus: {
-        ScienceCenter: {
-          Room401: { x: 15, y: 10 },
-          Room402: { x: 17, y: 12 },
-          Entrance: { x: 0, y: 0 }
+          Room201: { x: 15, y: 10 }
         }
       }
     };
 
-    function normalize(str) {
-      return str?.trim();
-    }
-
+    // Parse query params
     const params = new URLSearchParams(window.location.search);
-    const campus = normalize(params.get("campus"));
-    const building = normalize(params.get("building"));
-    const startRoom = normalize(params.get("start"));
-    const destRoom = normalize(params.get("dest"));
+    const campus = params.get('campus');
+    const building = params.get('building');
+    const start = params.get('start');
+    const dest = params.get('dest');
 
-    const buildingMap = maps?.[campus]?.[building];
-    const startCoords = buildingMap?.[startRoom];
-    const destCoords = buildingMap?.[destRoom];
-
+    const startCoords = maps?.[campus]?.[building]?.[start];
+    const destCoords = maps?.[campus]?.[building]?.[dest];
     if (!startCoords || !destCoords) {
-      alert("Invalid campus, building, or room selection.");
+      alert('Invalid location data.');
     }
 
-    let usingRearCamera = true;
-    function startCamera(facingMode) {
-      navigator.mediaDevices.getUserMedia({ video: { facingMode } })
-        .then(stream => camera.srcObject = stream)
-        .catch(err => alert("Camera access failed: " + err.message));
+    let deviceHeading = 0;
+    let userPosition = { ...startCoords };
+    let lastStepTime = 0;
+    let accelBuffer = [];
+    const bufferSize = 10;
+
+    function enableMotion() {
+      document.getElementById('motionOverlay').style.display = 'none';
+
+      if (typeof DeviceMotionEvent?.requestPermission === 'function') {
+        Promise.all([
+          DeviceMotionEvent.requestPermission(),
+          DeviceOrientationEvent.requestPermission()
+        ]).then(responses => {
+          if (responses.every(r => r === 'granted')) {
+            window.addEventListener('devicemotion', handleMotion);
+            window.addEventListener('deviceorientation', handleOrientation);
+            requestAnimationFrame(updateArrow);
+          } else {
+            alert('Motion permission denied.');
+          }
+        });
+      } else {
+        window.addEventListener('devicemotion', handleMotion);
+        window.addEventListener('deviceorientation', handleOrientation);
+        requestAnimationFrame(updateArrow);
+      }
+    }
+
+    function handleOrientation(e) {
+      if (e.alpha !== null) deviceHeading = e.alpha;
+    }
+
+    function handleMotion(e) {
+      const acc = e.accelerationIncludingGravity;
+      if (!acc) return;
+
+      const magnitude = Math.sqrt(acc.x**2 + acc.y**2 + acc.z**2);
+      accelBuffer.push(magnitude);
+      if (accelBuffer.length > bufferSize) accelBuffer.shift();
+
+      const avg = accelBuffer.reduce((a,b)=>a+b,0)/accelBuffer.length;
+      const now = Date.now();
+
+      if (avg > STEP_THRESHOLD && now - lastStepTime > STEP_COOLDOWN) {
+        lastStepTime = now;
+        takeStep();
+      }
+    }
+
+    function takeStep() {
+      const rad = deviceHeading * Math.PI / 180;
+      userPosition.x += Math.cos(rad) * STEP_LENGTH;
+      userPosition.y += Math.sin(rad) * STEP_LENGTH;
+    }
+
+    function updateArrow() {
+      const dx = destCoords.x - userPosition.x;
+      const dy = destCoords.y - userPosition.y;
+      const distance = Math.hypot(dx, dy);
+
+      let proximity = 'Far';
+      if (distance < 2) proximity = 'Close';
+      else if (distance < 5) proximity = 'Near';
+
+      const bearing = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
+      const relative = (bearing - deviceHeading + 360) % 360;
+
+      // Rotate 3D arrow toward destination
+      arrow3d.setAttribute('rotation', `0 ${relative} 0`);
+
+      progressPrompt.textContent = `${proximity} to ${dest} (${distance.toFixed(1)}m)`;
+      arrivalPrompt.style.display = (distance < ARRIVAL_RADIUS) ? 'block' : 'none';
+
+      requestAnimationFrame(updateArrow);
     }
 
     function flipCamera() {
-      usingRearCamera = !usingRearCamera;
-      const mode = usingRearCamera ? { exact: "environment" } : "user";
-      startCamera(mode);
+      alert("Camera flip not yet implemented for AR view.");
     }
-
-    let userPosition = { ...startCoords };
-    let deviceHeading = 0;
-    let previousDistance = Math.hypot(destCoords.x - userPosition.x, destCoords.y - userPosition.y);
-    let currentBearing = 0;
-
-    function handleOrientation(e) {
-      if (e.alpha !== null) {
-        deviceHeading = e.alpha;
-      }
-    }
-
-    function enableMotion() {
-      const overlay = document.getElementById('motionOverlay');
-      overlay.style.display = 'none';
-
-      if (typeof DeviceMotionEvent?.requestPermission === 'function') {
-        DeviceMotionEvent.requestPermission()
-          .then(response => {
-            if (response === 'granted') {
-              window.addEventListener('deviceorientation', handleOrientation);
-              requestAnimationFrame(updateNavigation);
-            } else {
-              alert("Motion access denied. Navigation may not work properly.");
-            }
-          })
-          .catch(err => {
-            console.error("Motion permission error:", err);
-          });
-      } else {
-        window.addEventListener('deviceorientation', handleOrientation);
-        requestAnimationFrame(updateNavigation);
-      }
-    }
-
-    function updateNavigation() {
-      const dx = destCoords.x - userPosition.x;
-      const dy = destCoords.y - userPosition.y;
-      currentBearing = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
-
-      const relativeRotation = (currentBearing - deviceHeading + 360) % 360;
-      arrow.style.transform = `translate(-50%, -50%) rotate(${relativeRotation}deg)`;
-
-      const distance = Math.hypot(dx, dy);
-      progressPrompt.textContent = `You're ${distance.toFixed(1)} units away from ${destRoom}`;
-
-      arrivalPrompt.style.display = (distance < ARRIVAL_RADIUS) ? 'block' : 'none';
-
-      previousDistance = distance;
-      requestAnimationFrame(updateNavigation);
-    }
-
-    // ✅ Start camera immediately on page load
-    window.addEventListener('load', () => {
-      startCamera({ exact: "environment" });
-    });
   </script>
 </body>
 </html>
