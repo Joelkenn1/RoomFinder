@@ -209,7 +209,7 @@
       }
     }
 
-    async function enableMotion() {
+   async function enableMotion() {
       const overlay = document.getElementById("motionOverlay");
 
       if (typeof DeviceOrientationEvent?.requestPermission === "function") {
@@ -227,6 +227,13 @@
 
       overlay.style.display = "none";
       await initCamera();
+
+      // Avoid double permission prompt
+      const scene = document.querySelector("a-scene");
+      if (scene && scene.renderer && scene.renderer.xr) {
+        scene.renderer.xr.enabled = true;
+      }
+
       startMotionTracking();
     }
 
