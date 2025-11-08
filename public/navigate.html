@@ -49,11 +49,36 @@
       bottom: 10%;
       font-size: 1.2rem;
     }
+      #motionOverlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      background: rgba(0,0,0,0.85);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+    }
+
+    #motionButton {
+      font-size: 2rem;
+      padding: 1rem 2rem;
+      background-color: rgba(0,0,0,0.5);
+      color: white;
+      border: 2px solid white;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
   </style>
 </head>
 
 <body>
   <video id="cameraFeed" autoplay playsinline></video>
+
+  <div id="motionOverlay">
+    <button id="motionButton" onclick="enableMotion()">Enable Motion</button>
+  </div>
 
   <div id="destinationPrompt">Destination: Loading...</div>
   <div id="progressPrompt">Loading navigation...</div>
