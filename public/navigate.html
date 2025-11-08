@@ -111,7 +111,15 @@
   <div id="progressPrompt">Loading navigation...</div>
   <div id="arrivalPrompt">You've arrived!</div>
 
-  <a-scene embedded vr-mode-ui="enabled: false" renderer="antialias: true; alpha: true;">
+  <!-- A-Frame Scene (starts hidden to prevent system prompt) -->
+  <a-scene id="sceneRoot"
+           embedded
+           visible="false"
+           renderer="antialias: true; alpha: true;"
+           vr-mode-ui="enabled: false"
+           xr-mode-ui="enabled: false"
+           loading-screen="enabled: false"
+           device-orientation-permission-ui="enabled: false">
     <a-entity id="camera" camera look-controls="touchEnabled: false">
       <a-entity id="arrow3d"
         geometry="primitive: cone; radiusBottom: 0.15; height: 0.5"
@@ -209,31 +217,28 @@
       }
     }
 
-   async function enableMotion() {
+    async function enableMotion() {
       const overlay = document.getElementById("motionOverlay");
+      const scene = document.getElementById("sceneRoot");
 
-      if (typeof DeviceOrientationEvent?.requestPermission === "function") {
-        try {
+      try {
+        if (typeof DeviceOrientationEvent?.requestPermission === "function") {
           const orientPerm = await DeviceOrientationEvent.requestPermission();
           if (orientPerm !== "granted") {
             alert("Orientation permission denied.");
             return;
           }
-        } catch (err) {
-          alert("Motion permission error: " + err);
-          return;
         }
+      } catch (err) {
+        alert("Motion permission error: " + err);
+        return;
       }
 
+      // Hide overlay and reveal AR scene after permission is granted
       overlay.style.display = "none";
+      scene.setAttribute("visible", "true");
+
       await initCamera();
-
-      // Avoid double permission prompt
-      const scene = document.querySelector("a-scene");
-      if (scene && scene.renderer && scene.renderer.xr) {
-        scene.renderer.xr.enabled = true;
-      }
-
       startMotionTracking();
     }
 
@@ -267,7 +272,6 @@
       const targetAngle = Math.atan2(dyDest, dxDest);
 
       // --- Move Arrow ---
-      // Lead only if not too far and not arrived
       if (distToDest > ARRIVAL_RADIUS) {
         if (arrowMoving && distToUser <= MAX_ARROW_DISTANCE) {
           const moveStep = Math.min(MOVE_SPEED, distToDest);
@@ -275,12 +279,9 @@
           arrowPos.y += Math.sin(targetAngle) * moveStep;
         }
 
-        // Pause if arrow too far ahead
         if (distToUser > MAX_ARROW_DISTANCE) {
           arrowMoving = false;
-        }
-        // Resume when user catches up
-        else if (distToUser < MIN_ARROW_DISTANCE) {
+        } else if (distToUser < MIN_ARROW_DISTANCE) {
           arrowMoving = true;
         }
       }
@@ -299,7 +300,6 @@
       let proximity = "Far";
       if (distToDest < 2) proximity = "Close";
       else if (distToDest < 5) proximity = "Near";
-
       progressPrompt.textContent = `${proximity} (${distToDest.toFixed(1)}m)`;
 
       if (distToDest < ARRIVAL_RADIUS) {
