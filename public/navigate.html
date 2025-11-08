@@ -49,7 +49,8 @@
       bottom: 10%;
       font-size: 1.2rem;
     }
-      #motionOverlay {
+
+    #motionOverlay {
       position: fixed;
       top: 0; left: 0;
       width: 100vw; height: 100vh;
@@ -69,7 +70,6 @@
       border-radius: 8px;
       cursor: pointer;
     }
-
   </style>
 </head>
 
@@ -84,7 +84,7 @@
   <div id="progressPrompt">Loading navigation...</div>
   <div id="arrivalPrompt">You've arrived!</div>
 
-    <a-scene id="sceneRoot"
+  <a-scene id="sceneRoot"
            embedded
            visible="false"
            renderer="antialias: true; alpha: true;"
@@ -111,6 +111,7 @@
     const MIN_ARROW_DISTANCE = 1.0;
     const BOB_SPEED = 2.0;
     const BOB_AMPLITUDE = 0.05;
+    const APPROACH_SCALE_THRESHOLD = 0.005; // detect closeness visually
 
     // ==========================
     // DOM REFERENCES
@@ -160,16 +161,17 @@
     const buildingMap = maps?.[campus]?.[building];
     const startCoords = buildingMap?.[startRoom];
     const destCoords = buildingMap?.[destRoom];
-    const destinationName = destRoom?.toUpperCase() ?? "Unknown";
+
+    const destinationName = destRoom.toUpperCase();
 
     if (!startCoords || !destCoords) {
       alert("Invalid campus, building, or room selection.");
     } else {
-      destinationPrompt.textContent = `Destination: ${destinationName}`;
+      destinationPrompt.textContent = "Destination: " + destinationName;
     }
 
     // ==========================
-    // CAMERA INIT (no motion permissions)
+    // CAMERA INIT
     // ==========================
     async function initCamera() {
       try {
@@ -206,24 +208,19 @@
       startTracking();
     }
 
-    function startTracking() {
-      window.addEventListener("deviceorientation", e => {
-        if (e.alpha !== null) deviceHeading = e.alpha * (Math.PI / 180);
-      });
-
-      requestAnimationFrame(updateArrow);
-    }
-
-
     // ==========================
     // ARROW LOGIC
     // ==========================
-    let navigationReady = !!(startCoords && destCoords);
+    let navigationReady = (startCoords && destCoords);
     let arrowDistance = 2.0;
-    let arrowMoving = true;
-    let prevScale = 1;
     let remainingDistance = Math.hypot(destCoords.x - startCoords.x, destCoords.y - startCoords.y);
+    let currentPos = { x: startCoords.x, y: startCoords.y };
+    let prevScale = 1;
     let time = 0;
+
+    function startTracking() {
+      requestAnimationFrame(updateArrow);
+    }
 
     function updateArrow() {
       time += 0.016;
@@ -234,46 +231,50 @@
         return;
       }
 
+      const dx = destCoords.x - currentPos.x;
+      const dy = destCoords.y - currentPos.y;
+      const distance = Math.hypot(dx, dy);
+
+      // Point arrow toward destination
+      const angle = Math.atan2(dy, dx);
+      arrow3d.object3D.rotation.set(0, -angle, 0);
+
+      // Move arrow only when far enough
+      if (distance > ARRIVAL_RADIUS) {
+        if (arrowDistance < MAX_ARROW_DISTANCE) {
+          arrowDistance += MOVE_SPEED;
+          currentPos.x += Math.cos(angle) * MOVE_SPEED;
+          currentPos.y += Math.sin(angle) * MOVE_SPEED;
+          remainingDistance = distance;
+        }
+      }
+
       // Bobbing effect
       const bobY = -0.3 + Math.sin(time * BOB_SPEED) * BOB_AMPLITUDE;
 
-      // Move arrow gradually toward destination
-      if (arrowMoving && remainingDistance > ARRIVAL_RADIUS) {
-        arrowDistance += MOVE_SPEED;
-        if (arrowDistance > MAX_ARROW_DISTANCE) {
-          arrowDistance = MAX_ARROW_DISTANCE;
-          arrowMoving = false;
-        }
-        remainingDistance -= MOVE_SPEED;
-      }
-
-      // Scale based on distance (visual depth)
+      // Scale based on arrowDistance (appears smaller as it moves away)
       const scale = 1 / (1 + arrowDistance * 0.25);
       arrow3d.object3D.scale.set(scale, scale, scale);
 
-      // If arrow looks larger (user moving closer), pull it back a bit
-      if (scale > prevScale + 0.002 && !arrowMoving) {
-        arrowDistance -= 0.05;
-        if (arrowDistance < MIN_ARROW_DISTANCE) {
-          arrowDistance = MIN_ARROW_DISTANCE;
-          arrowMoving = true;
-        }
+      // Detect visual "approach": if arrow appears larger, move it forward again
+      if (scale > prevScale + APPROACH_SCALE_THRESHOLD) {
+        arrowDistance = Math.min(arrowDistance + MOVE_SPEED, MAX_ARROW_DISTANCE);
       }
+
       prevScale = scale;
 
-      // Apply position
+      // Apply position visually
       arrow3d.setAttribute("position", `0 ${bobY.toFixed(2)} ${-arrowDistance.toFixed(2)}`);
 
-      // Update proximity display
-      let proximity = "Far";
-      if (remainingDistance < 2) proximity = "Close";
-      else if (remainingDistance < 5) proximity = "Near";
-      progressPrompt.textContent = `${proximity} (${remainingDistance.toFixed(1)}m)`;
-
-      // Arrival
-      if (remainingDistance < ARRIVAL_RADIUS) {
+      // Update distance text
+      if (distance <= ARRIVAL_RADIUS) {
         arrivalPrompt.style.display = "block";
-        progressPrompt.textContent = `Arrived at ${destinationName}`;
+        progressPrompt.textContent = "Arrived at " + destinationName;
+      } else {
+        let proximity = "Far";
+        if (distance < 2) proximity = "Close";
+        else if (distance < 5) proximity = "Near";
+        progressPrompt.textContent = `${proximity} (${distance.toFixed(1)}m)`;
       }
 
       requestAnimationFrame(updateArrow);
