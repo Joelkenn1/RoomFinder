@@ -59,17 +59,19 @@
   <div id="progressPrompt">Loading navigation...</div>
   <div id="arrivalPrompt">You've arrived!</div>
 
-  <a-scene id="sceneRoot"
+    <a-scene id="sceneRoot"
            embedded
+           visible="false"
            renderer="antialias: true; alpha: true;"
            vr-mode-ui="enabled: false"
            xr-mode-ui="enabled: false"
-           loading-screen="enabled: false">
+           loading-screen="enabled: false"
+           device-orientation-permission-ui="enabled: false">
     <a-entity id="camera" camera look-controls="touchEnabled: false">
       <a-entity id="arrow3d"
         geometry="primitive: cone; radiusBottom: 0.15; height: 0.5"
         material="color: red"
-        position="0 -0.3 -2">
+        position="0 -0.3 -1.5">
       </a-entity>
     </a-entity>
   </a-scene>
@@ -147,15 +149,46 @@
     async function initCamera() {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment" },
-          audio: false
+          video: { facingMode: "environment" }
         });
         video.srcObject = stream;
       } catch (err) {
         alert("Camera access failed: " + err.message);
       }
     }
-    initCamera();
+
+    async function enableMotion() {
+      const overlay = document.getElementById("motionOverlay");
+      const scene = document.getElementById("sceneRoot");
+
+      try {
+        if (typeof DeviceOrientationEvent?.requestPermission === "function") {
+          const permission = await DeviceOrientationEvent.requestPermission();
+          if (permission !== "granted") {
+            alert("Motion permission denied.");
+            return;
+          }
+        }
+      } catch (e) {
+        alert("Motion permission error: " + e);
+        return;
+      }
+
+      overlay.style.display = "none";
+      scene.setAttribute("visible", "true");
+
+      await initCamera();
+      startTracking();
+    }
+
+    function startTracking() {
+      window.addEventListener("deviceorientation", e => {
+        if (e.alpha !== null) deviceHeading = e.alpha * (Math.PI / 180);
+      });
+
+      requestAnimationFrame(updateArrow);
+    }
+
 
     // ==========================
     // ARROW LOGIC
