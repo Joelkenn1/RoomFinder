@@ -106,12 +106,12 @@
     // CONFIG
     // ==========================
     const ARRIVAL_RADIUS = 1.5;
-    const MOVE_SPEED = 0.03;
+    const MOVE_SPEED = 0.02;
     const MAX_ARROW_DISTANCE = 4.0;
     const MIN_ARROW_DISTANCE = 1.0;
     const BOB_SPEED = 2.0;
     const BOB_AMPLITUDE = 0.05;
-    const APPROACH_SCALE_THRESHOLD = 0.005; // detect closeness visually
+    const APPROACH_SCALE_THRESHOLD = 0.003;
 
     // ==========================
     // DOM REFERENCES
@@ -161,8 +161,7 @@
     const buildingMap = maps?.[campus]?.[building];
     const startCoords = buildingMap?.[startRoom];
     const destCoords = buildingMap?.[destRoom];
-
-    const destinationName = destRoom.toUpperCase();
+    const destinationName = destRoom?.toUpperCase() || "Unknown";
 
     if (!startCoords || !destCoords) {
       alert("Invalid campus, building, or room selection.");
@@ -235,38 +234,33 @@
       const dy = destCoords.y - currentPos.y;
       const distance = Math.hypot(dx, dy);
 
-      // Point arrow toward destination
+      // ✅ Arrow rotation always faces destination
       const angle = Math.atan2(dy, dx);
       arrow3d.object3D.rotation.set(0, -angle, 0);
 
-      // Move arrow only when far enough
+      // ✅ Move arrow visually toward destination
       if (distance > ARRIVAL_RADIUS) {
-        if (arrowDistance < MAX_ARROW_DISTANCE) {
-          arrowDistance += MOVE_SPEED;
-          currentPos.x += Math.cos(angle) * MOVE_SPEED;
-          currentPos.y += Math.sin(angle) * MOVE_SPEED;
-          remainingDistance = distance;
-        }
+        arrowDistance = Math.min(arrowDistance + MOVE_SPEED, MAX_ARROW_DISTANCE);
+        currentPos.x += Math.cos(angle) * MOVE_SPEED;
+        currentPos.y += Math.sin(angle) * MOVE_SPEED;
+        remainingDistance = distance;
       }
 
-      // Bobbing effect
+      // ✅ Bobbing + dynamic scaling
       const bobY = -0.3 + Math.sin(time * BOB_SPEED) * BOB_AMPLITUDE;
-
-      // Scale based on arrowDistance (appears smaller as it moves away)
       const scale = 1 / (1 + arrowDistance * 0.25);
       arrow3d.object3D.scale.set(scale, scale, scale);
 
-      // Detect visual "approach": if arrow appears larger, move it forward again
+      // ✅ If arrow appears larger (user closer), pull it back a bit
       if (scale > prevScale + APPROACH_SCALE_THRESHOLD) {
-        arrowDistance = Math.min(arrowDistance + MOVE_SPEED, MAX_ARROW_DISTANCE);
+        arrowDistance = Math.max(arrowDistance - MOVE_SPEED, MIN_ARROW_DISTANCE);
       }
-
       prevScale = scale;
 
-      // Apply position visually
+      // ✅ Update position
       arrow3d.setAttribute("position", `0 ${bobY.toFixed(2)} ${-arrowDistance.toFixed(2)}`);
 
-      // Update distance text
+      // ✅ Update distance text
       if (distance <= ARRIVAL_RADIUS) {
         arrivalPrompt.style.display = "block";
         progressPrompt.textContent = "Arrived at " + destinationName;
