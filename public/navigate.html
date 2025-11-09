@@ -92,12 +92,14 @@
            xr-mode-ui="enabled: false"
            loading-screen="enabled: false"
            device-orientation-permission-ui="enabled: false">
-    <a-entity id="camera" camera look-controls="touchEnabled: false">
-      <a-entity id="arrow3d"
+
+    <!-- camera remains, but arrow is now a sibling so it can be placed in world space -->
+    <a-entity id="camera" camera look-controls="touchEnabled: false"></a-entity>
+
+    <a-entity id="arrow3d"
         geometry="primitive: cone; radiusBottom: 0.15; height: 0.5"
         material="color: red"
         position="0 -0.3 -1.5">
-      </a-entity>
     </a-entity>
   </a-scene>
 
@@ -106,9 +108,9 @@
     // CONFIG
     // ==========================
     const ARRIVAL_RADIUS = 1.5;
-    const MOVE_SPEED = 0.02;
-    const MAX_ARROW_DISTANCE = 4.0;
-    const MIN_ARROW_DISTANCE = 1.0;
+    const MOVE_SPEED = 0.03;            // arrow forward speed (virtual map units)
+    const MAX_ARROW_DISTANCE = 4.0;     // how far arrow can be from user before it pauses
+    const MIN_ARROW_DISTANCE = 1.0;     // how close user must get to resume arrow
     const BOB_SPEED = 2.0;
     const BOB_AMPLITUDE = 0.05;
     const APPROACH_SCALE_THRESHOLD = 0.003;
@@ -117,13 +119,14 @@
     // DOM REFERENCES
     // ==========================
     const arrow3d = document.getElementById("arrow3d");
+    const cameraEl = document.getElementById("camera");
     const progressPrompt = document.getElementById("progressPrompt");
     const arrivalPrompt = document.getElementById("arrivalPrompt");
     const destinationPrompt = document.getElementById("destinationPrompt");
     const video = document.getElementById("cameraFeed");
 
     // ==========================
-    // LOCATION DATA
+    // LOCATION DATA (unchanged)
     // ==========================
     function normalize(str) { return str?.trim(); }
 
@@ -161,7 +164,8 @@
     const buildingMap = maps?.[campus]?.[building];
     const startCoords = buildingMap?.[startRoom];
     const destCoords = buildingMap?.[destRoom];
-    const destinationName = destRoom?.toUpperCase() || "Unknown";
+
+    const destinationName = destRoom ? destRoom.toUpperCase() : "Unknown";
 
     if (!startCoords || !destCoords) {
       alert("Invalid campus, building, or room selection.");
@@ -183,6 +187,10 @@
       }
     }
 
+    // ==========================
+    // ENABLE MOTION - capture world origin at this time
+    // ==========================
+    let worldOrigin = new THREE.Vector3(); // maps startCoords -> this world origin
     async function enableMotion() {
       const overlay = document.getElementById("motionOverlay");
       const scene = document.getElementById("sceneRoot");
@@ -196,27 +204,50 @@
           }
         }
       } catch (e) {
-        alert("Motion permission error: " + e);
-        return;
+        /* ignore - ios may throw if not supported; we still proceed */
       }
 
       overlay.style.display = "none";
       scene.setAttribute("visible", "true");
 
       await initCamera();
+
+      // capture camera world position at the moment we start — treat that as origin mapping to startCoords
+      const camObj = cameraEl.object3D;
+      camObj.updateMatrixWorld();
+      camObj.getWorldPosition(worldOrigin);
+
+      // start update loop
       startTracking();
     }
 
     // ==========================
-    // ARROW LOGIC
+    // VIRTUAL + WORLD STATE
     // ==========================
-    let navigationReady = (startCoords && destCoords);
-    let arrowDistance = 2.0;
-    let remainingDistance = Math.hypot(destCoords.x - startCoords.x, destCoords.y - startCoords.y);
-    let currentPos = { x: startCoords.x, y: startCoords.y };
+    // virtual map coordinates (2D): x,y
+    let arrowPos = { x: startCoords.x, y: startCoords.y };   // arrow's location in virtual map
+    let userPos = { x: startCoords.x, y: startCoords.y };    // user's virtual map location (changes only when user "catches up")
+    let arrowPaused = false;
     let prevScale = 1;
     let time = 0;
+    let navigationReady = (startCoords && destCoords);
 
+    function mapToWorld(vx, vy) {
+      // Map virtual (map-x, map-y) to world coords using worldOrigin as camera start origin.
+      // We'll align map x -> world X, map y -> world Z
+      const wx = worldOrigin.x + (vx - startCoords.x);
+      const wy = worldOrigin.y; // keep roughly camera height
+      const wz = worldOrigin.z + (vy - startCoords.y);
+      return new THREE.Vector3(wx, wy, wz);
+    }
+
+    function distance2(a, b) {
+      return Math.hypot(a.x - b.x, a.y - b.y);
+    }
+
+    // ==========================
+    // TRACK + UPDATE
+    // ==========================
     function startTracking() {
       requestAnimationFrame(updateArrow);
     }
@@ -230,50 +261,85 @@
         return;
       }
 
-      const dx = destCoords.x - currentPos.x;
-      const dy = destCoords.y - currentPos.y;
-      const distance = Math.hypot(dx, dy);
+      // virtual distances
+      const dxAD = destCoords.x - arrowPos.x;
+      const dyAD = destCoords.y - arrowPos.y;
+      const distArrowToDest = Math.hypot(dxAD, dyAD);
 
-      // ✅ Arrow rotation always faces destination
-      const angle = Math.atan2(dy, dx);
-      arrow3d.object3D.rotation.set(0, -angle, 0);
+      const dxAU = arrowPos.x - userPos.x;
+      const dyAU = arrowPos.y - userPos.y;
+      const distArrowToUser = Math.hypot(dxAU, dyAU);
 
-      // ✅ Move arrow visually toward destination
-      if (distance > ARRIVAL_RADIUS) {
-        arrowDistance = Math.min(arrowDistance + MOVE_SPEED, MAX_ARROW_DISTANCE);
-        currentPos.x += Math.cos(angle) * MOVE_SPEED;
-        currentPos.y += Math.sin(angle) * MOVE_SPEED;
-        remainingDistance = distance;
+      // compute direction from arrow to dest (virtual)
+      const angleToDest = Math.atan2(dyAD, dxAD); // radians
+
+      // --- move arrow forward in virtual map ONLY if not paused and not arrived
+      if (distArrowToDest > ARRIVAL_RADIUS && !arrowPaused) {
+        // advance arrow along direction toward destination
+        const step = Math.min(MOVE_SPEED, distArrowToDest);
+        arrowPos.x += Math.cos(angleToDest) * step;
+        arrowPos.y += Math.sin(angleToDest) * step;
       }
 
-      // ✅ Bobbing + dynamic scaling
+      // Update remainingDistance based on arrow's virtual position -> destination
+      const remainingDistance = Math.hypot(destCoords.x - arrowPos.x, destCoords.y - arrowPos.y);
+
+      // --- Determine whether arrow should pause/resume based on user distance
+      if (distArrowToUser > MAX_ARROW_DISTANCE) {
+        arrowPaused = true;
+      } else if (distArrowToUser < MIN_ARROW_DISTANCE) {
+        arrowPaused = false;
+      }
+
+      // --- Visual placement: place arrow in world coordinates relative to worldOrigin
+      // convert arrowPos (virtual) -> world coords
+      const arrowWorld = mapToWorld(arrowPos.x, arrowPos.y);
+
+      // bobbing effect
       const bobY = -0.3 + Math.sin(time * BOB_SPEED) * BOB_AMPLITUDE;
-      const scale = 1 / (1 + arrowDistance * 0.25);
+
+      // Set arrow world Y slightly relative to camera height (worldOrigin.y) + bob
+      arrow3d.object3D.position.set(arrowWorld.x, worldOrigin.y - 0.3 + bobY, arrowWorld.z);
+
+      // --- rotation: make arrow face toward destination (in world/map space)
+      // compute angle in world around Y: because map Y->world Z and map X->world X, rotate accordingly
+      arrow3d.object3D.rotation.set(0, -angleToDest, 0);
+
+      // --- scale: base on dist from user to arrow (visual depth)
+      const scale = 1 / (1 + distArrowToUser * 0.25);
       arrow3d.object3D.scale.set(scale, scale, scale);
 
-      // ✅ If arrow appears larger (user closer), pull it back a bit
-      if (scale > prevScale + APPROACH_SCALE_THRESHOLD) {
-        arrowDistance = Math.max(arrowDistance - MOVE_SPEED, MIN_ARROW_DISTANCE);
+      // --- Visual-based "user catch-up": if arrow appears larger than previous frame and arrow was paused,
+      // assume user moved closer and advance userPos toward arrow slightly.
+      if (scale > prevScale + APPROACH_SCALE_THRESHOLD && arrowPaused) {
+        // pull userPos toward arrowPos a bit (simulate real user closing the gap)
+        const pull = 0.15; // virtual map units
+        const dirX = arrowPos.x - userPos.x;
+        const dirY = arrowPos.y - userPos.y;
+        const d = Math.hypot(dirX, dirY);
+        if (d > 0.001) {
+          userPos.x += (dirX / d) * pull;
+          userPos.y += (dirY / d) * pull;
+        }
       }
+
       prevScale = scale;
 
-      // ✅ Update position
-      arrow3d.setAttribute("position", `0 ${bobY.toFixed(2)} ${-arrowDistance.toFixed(2)}`);
-
-      // ✅ Update distance text
-      if (distance <= ARRIVAL_RADIUS) {
+      // --- UI updates (remainingDistance shown is based on arrow -> dest)
+      if (remainingDistance <= ARRIVAL_RADIUS) {
         arrivalPrompt.style.display = "block";
         progressPrompt.textContent = "Arrived at " + destinationName;
       } else {
         let proximity = "Far";
-        if (distance < 2) proximity = "Close";
-        else if (distance < 5) proximity = "Near";
-        progressPrompt.textContent = `${proximity} (${distance.toFixed(1)}m)`;
+        if (remainingDistance < 2) proximity = "Close";
+        else if (remainingDistance < 5) proximity = "Near";
+        progressPrompt.textContent = `${proximity} (${remainingDistance.toFixed(1)}m)`;
       }
 
       requestAnimationFrame(updateArrow);
     }
 
+    // start the loop so UI isn't blank
     requestAnimationFrame(updateArrow);
   </script>
 </body>
