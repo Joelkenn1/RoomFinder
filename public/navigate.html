@@ -119,14 +119,18 @@
            xr-mode-ui="enabled: false"
            loading-screen="enabled: false"
            device-orientation-permission-ui="enabled: false">
-    
-    <a-entity id="camera" camera look-controls="touchEnabled: false" magicWindowTrackingEnabled: true">
-      <a-entity id="arrow3d" lock-to-camera>
-         <a-entity id="arrowVisual" geometry="primitive: cone; radiusBottom: 0.15; height: 0.5" material="color:red"
-            animation="property: position; to: 0 -0.25 0; dir: alternate; dur: 1200; loop: true">
-        </a-entity>
+
+    <!-- Camera -->
+    <a-entity id="camera" camera look-controls="touchEnabled: false" magicWindowTrackingEnabled="true"></a-entity>
+
+    <!-- Arrow directly in scene -->
+    <a-entity id="arrow3d">
+      <a-entity id="arrowVisual" geometry="primitive: cone; radiusBottom: 0.15; height: 0.5"
+                material="color:red"
+                animation="property: position; to: 0 -0.25 0; dir: alternate; dur: 1200; loop: true">
       </a-entity>
     </a-entity>
+
   </a-scene>
 
   <script>
@@ -136,7 +140,7 @@
     const STEP_THRESHOLD = 1.8;
     const STEP_COOLDOWN = 600;
     const bufferSize = 15;
-    
+
     /* ----------------- Elements ----------------- */
     const arrow3d = document.getElementById("arrow3d");
     const progressPrompt = document.getElementById("progressPrompt");
@@ -195,7 +199,6 @@
     let lastStepTime = 0;
     let deviceHeading = 0;
     let userPosition = { ...startCoords };
-    let currentArrowRotation = 0;
 
     /* ----------------- Motion Access ----------------- */
     async function initCamera(){
@@ -278,37 +281,38 @@
       const dx = destCoords.x - userPosition.x;
       const dy = destCoords.y - userPosition.y;
       const distance = Math.hypot(dx, dy);
-    
-      // Compute angle to destination in radians
-      const angleRad = Math.atan2(dy, dx);
-    
-      // Y-axis rotation (2D plane) quaternion
-      const quaternion = new THREE.Quaternion();
-      quaternion.setFromEuler(new THREE.Euler(0, -angleRad, 0, 'YXZ'));
-    
-      // Apply world rotation to arrow
-      arrow3d.object3D.setRotationFromQuaternion(quaternion);
-    
-      // Keep arrow in front of camera (local position)
-      arrow3d.object3D.position.set(0, 0.1, -1.5);
-    
-      // Update distance prompts
+
+      // 1. Camera info
+      const cameraObj = document.getElementById("camera").object3D;
+      const arrowObj = arrow3d.object3D;
+
+      const cameraWorldPos = new THREE.Vector3();
+      cameraObj.getWorldPosition(cameraWorldPos);
+
+      const cameraDir = new THREE.Vector3();
+      cameraObj.getWorldDirection(cameraDir);
+
+      // 2. Place arrow in front of camera
+      const ARROW_DISTANCE = 1.5;
+      arrowObj.position.copy(cameraWorldPos).add(cameraDir.multiplyScalar(ARROW_DISTANCE));
+
+      // 3. Compute arrow rotation towards destination
+      const destPos = new THREE.Vector3(destCoords.x, 0, destCoords.y);
+      const arrowToDest = new THREE.Vector3().subVectors(destPos, arrowObj.position);
+      const angleY = Math.atan2(arrowToDest.x, arrowToDest.z); // rotation around Y
+
+      arrowObj.rotation.set(0, angleY, 0);
+
+      // 4. UI update
       let proximity = "Far";
       if(distance < 2) proximity = "Close";
       else if(distance < 5) proximity = "Near";
-    
+
       progressPrompt.textContent = `${proximity} (${distance.toFixed(1)}m)`;
       arrivalPrompt.style.display = (distance < ARRIVAL_RADIUS) ? "block" : "none";
-    
+
       requestAnimationFrame(updateArrow);
     }
-    /* ----------------- Lock Arrow to Camera ----------------- */
-    AFRAME.registerComponent('lock-to-camera', {
-      tick: function() {
-      // Only set local position relative to camera
-      this.el.object3D.position.set(0, 0.1, -1.5);
-  }
-});
   </script>
 </body>
 </html>
