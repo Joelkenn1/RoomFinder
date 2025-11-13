@@ -121,7 +121,7 @@
            device-orientation-permission-ui="enabled: false">
     
     <a-entity id="camera" camera look-controls="touchEnabled: false" magicWindowTrackingEnabled: true">
-      <a-entity id="arrow3d" position="0 -0.3 -1.5">
+      <a-entity id="arrow3d" position="0 -0.3 -1.5" lock-to-camera>
          <a-entity id="arrowVisual" geometry="primitive: cone; radiusBottom: 0.15; height: 0.5" material="color:red"
             animation="property: position; to: 0 -0.25 0; dir: alternate; dur: 1200; loop: true">
         </a-entity>
