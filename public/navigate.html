@@ -71,7 +71,7 @@
 
     #destinationPrompt { top: 3%; font-size: 1.3rem; }
     #progressPrompt { top: 18%; font-size: 1.1rem; }
-    #arrivalPrompt { display: none; bottom: 10%; font-size: 1.2rem; background: rgba(0,0,0,0.7); padding: 10px 20px; }
+    #arrivalPrompt { display: none; bottom: 10%; font-size: 1.2rem; background: rgba(0,0,0,0.7); padding: 10px 20px; border-radius: 8px; }
   </style>
 </head>
 
@@ -95,13 +95,14 @@
            loading-screen="enabled: false"
            device-orientation-permission-ui="enabled: false">
 
-    <!-- Camera with arrow as child -->
-    <a-entity id="camera" camera look-controls="touchEnabled: false" magicWindowTrackingEnabled="true">
-      <a-entity id="arrow3d">
-        <a-entity id="arrowVisual" geometry="primitive: cone; radiusBottom: 0.15; height: 0.5"
-                  material="color:red"
-                  animation="property: position; to: 0 -0.25 0; dir: alternate; dur: 1200; loop: true">
-        </a-entity>
+    <!-- Camera -->
+    <a-entity id="camera" camera look-controls="touchEnabled: false" magicWindowTrackingEnabled="true"></a-entity>
+
+    <!-- Arrow in the scene -->
+    <a-entity id="arrow3d" arrow-lock>
+      <a-entity id="arrowVisual" geometry="primitive: cone; radiusBottom: 0.15; height: 0.5"
+                material="color:red"
+                animation="property: position; to: 0 -0.25 0; dir: alternate; dur: 1200; loop: true">
       </a-entity>
     </a-entity>
 
@@ -150,11 +151,13 @@
 
     /* ----------------- URL Params ----------------- */
     function normalize(str) { return str?.trim(); }
+
     const params = new URLSearchParams(window.location.search);
     const campus = normalize(params.get("campus"));
     const building = normalize(params.get("building"));
     const startRoom = normalize(params.get("start"));
     const destRoom = normalize(params.get("dest"));
+
     const buildingMap = maps?.[campus]?.[building];
     const startCoords = buildingMap?.[startRoom];
     const destCoords = buildingMap?.[destRoom];
@@ -172,9 +175,9 @@
     let deviceHeading = 0;
     let userPosition = { ...startCoords };
 
-    /* ----------------- Motion & Orientation ----------------- */
+    /* ----------------- Motion Access ----------------- */
     async function initCamera(){
-      try {
+       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:"environment" } });
         video.srcObject = stream;
       } catch(e){ alert("Camera access failed: "+e.message); }
@@ -204,6 +207,7 @@
       requestAnimationFrame(updateArrow);
     }
 
+    /* ----------------- Orientation ----------------- */
     function handleOrientation(e) {
       if (e.webkitCompassHeading !== undefined) {
         deviceHeading = e.webkitCompassHeading;
@@ -212,66 +216,76 @@
       } else if (e.alpha !== null) {
         deviceHeading = 360 - e.alpha;
       }
-
       destinationPrompt.textContent = `Heading: ${deviceHeading.toFixed(0)}° | ${destinationName}`;
     }
 
-    /* ----------------- Step Detection ----------------- */
+    /* ----------------- Motion (Step Detection) ----------------- */
     function handleMotion(e) {
       const acc = e.accelerationIncludingGravity;
       if (!acc) return;
+
       const magnitude = Math.sqrt(acc.x**2 + acc.y**2 + acc.z**2);
       accelBuffer.push(magnitude);
       if (accelBuffer.length > bufferSize) accelBuffer.shift();
 
       const avg = accelBuffer.reduce((a,b)=>a+b,0)/accelBuffer.length;
-      const baseline = accelBuffer.slice(0, bufferSize-3).reduce((a,b)=>a+b,0)/(bufferSize-3);
       const now = Date.now();
-      if((avg - baseline) > 0.5 && avg > STEP_THRESHOLD && now - lastStepTime > STEP_COOLDOWN){
+      const baseline = accelBuffer.slice(0, bufferSize-3).reduce((a,b)=>a+b,0)/(bufferSize-3);
+
+      if((avg-baseline) > 0.5 && avg>STEP_THRESHOLD && now-lastStepTime>STEP_COOLDOWN){
         lastStepTime = now;
         takeStep();
       }
     }
 
-    function takeStep(){
+    function takeStep() {
       const dx = destCoords.x - userPosition.x;
       const dy = destCoords.y - userPosition.y;
-      const bearingToDest = (Math.atan2(dy, dx)*180/Math.PI + 360)%360;
-      const diff = ((bearingToDest - deviceHeading + 540)%360)-180;
-      const moveFactor = Math.cos(diff * Math.PI / 180);
-      const rad = deviceHeading * Math.PI / 180;
-      userPosition.x += Math.cos(rad) * STEP_LENGTH * moveFactor;
-      userPosition.y += Math.sin(rad) * STEP_LENGTH * moveFactor;
+      const bearingToDest = (Math.atan2(dy, dx) * 180/Math.PI + 360)%360;
+      const diff = ((bearingToDest-deviceHeading+540)%360)-180;
+      const moveFactor = Math.cos(diff*Math.PI/180);
+      const rad = deviceHeading*Math.PI/180;
+
+      userPosition.x += Math.cos(rad)*STEP_LENGTH*moveFactor;
+      userPosition.y += Math.sin(rad)*STEP_LENGTH*moveFactor;
     }
 
-    /* ----------------- Arrow Update ----------------- */
-    function updateArrow(){
-      const arrowObj = arrow3d.object3D;
+    /* ----------------- Arrow Component ----------------- */
+    AFRAME.registerComponent('arrow-lock', {
+      tick: function () {
+        const camera = this.el.sceneEl.camera.el.object3D;
+        const arrow = this.el.object3D;
 
-      // 1. Position arrow relative to camera
-      arrowObj.position.set(0, -0.2, -1.5);
+        // 1. Camera position
+        const camPos = new THREE.Vector3();
+        camera.getWorldPosition(camPos);
 
-      // 2. Compute vector to destination
-      const dx = destCoords.x - userPosition.x;
-      const dz = destCoords.y - userPosition.y;
+        // 2. Place arrow in front of camera
+        const forward = new THREE.Vector3(0, 0, -1);
+        forward.applyQuaternion(camera.quaternion);
+        arrow.position.copy(camPos).add(forward.multiplyScalar(1.5));
+        arrow.position.y = camPos.y - 0.2;
 
-      // 3. Compute angle
-      const angleY = Math.atan2(dx, dz);
+        // 3. Direction vector to destination
+        const destVec = new THREE.Vector3(destCoords.x - userPosition.x, 0, destCoords.y - userPosition.y);
 
-      // 4. Rotate arrow locally
-      arrowObj.rotation.set(0, angleY, 0);
+        // 4. Compute Y rotation angle toward destination
+        const angleY = Math.atan2(destVec.x, destVec.z);
 
-      // 5. Update proximity UI
-      const distance = Math.hypot(dx, dz);
-      let proximity = "Far";
-      if(distance < 2) proximity = "Close";
-      else if(distance < 5) proximity = "Near";
+        // 5. Apply rotation
+        arrow.rotation.set(0, angleY, 0);
 
-      progressPrompt.textContent = `${proximity} (${distance.toFixed(1)}m)`;
-      arrivalPrompt.style.display = (distance < ARRIVAL_RADIUS) ? "block" : "none";
+        // 6. Update UI
+        const distance = destVec.length();
+        let proximity = "Far";
+        if(distance<2) proximity="Close";
+        else if(distance<5) proximity="Near";
+        progressPrompt.textContent = `${proximity} (${distance.toFixed(1)}m)`;
+        arrivalPrompt.style.display = (distance<ARRIVAL_RADIUS) ? "block":"none";
+      }
+    });
 
-      requestAnimationFrame(updateArrow);
-    }
+    function updateArrow(){ requestAnimationFrame(updateArrow); }
   </script>
 </body>
 </html>
