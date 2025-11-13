@@ -301,30 +301,15 @@
     /* ----------------- Lock Arrow to Camera ----------------- */
     AFRAME.registerComponent('lock-to-camera', {
       tick: function () {
-        const cameraEl = this.el.sceneEl.camera.el;
-        if (!cameraEl) return;
-    
-        const cameraObj = cameraEl.object3D;
-        const arrowObj = this.el.object3D;
-    
-        // Get camera world position and orientation
-        const camWorldPos = new THREE.Vector3();
-        cameraObj.getWorldPosition(camWorldPos);
-    
-        const camWorldQuat = new THREE.Quaternion();
-        cameraObj.getWorldQuaternion(camWorldQuat);
-    
-        // Offset the arrow slightly in front of the camera
-        const offset = new THREE.Vector3(0, -0.3, -1.5);
-        offset.applyQuaternion(camWorldQuat);
-        camWorldPos.add(offset);
-    
-        // Apply final transforms
-        arrowObj.position.copy(camWorldPos);
-        arrowObj.quaternion.copy(camWorldQuat);
+        const camera = this.el.sceneEl.camera.el.object3D;
+        const arrow = this.el.object3D;
+        arrow.position.copy(camera.position);
+        const forward = new THREE.Vector3(0, -0.3, -1.5);
+        forward.applyQuaternion(camera.quaternion);
+        arrow.position.add(forward);
+        arrow.rotation.copy(camera.rotation);
       }
     });
-
 
   </script>
 </body>
