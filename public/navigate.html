@@ -268,7 +268,7 @@
 
         const ARROW_DISTANCE = 2.0; // move it farther away
         const ARROW_HEIGHT_OFFSET = -0.4; // slightly lower
-        arrow.position.copy(cameraWorldPos)
+        arrow.position.copy(camPos)
                          .add(cameraDir.multiplyScalar(ARROW_DISTANCE));
         arrow.position.y += ARROW_HEIGHT_OFFSET; 
 
