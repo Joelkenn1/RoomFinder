@@ -278,36 +278,38 @@
       userPosition.y += Math.sin(rad) * STEP_LENGTH * moveFactor;
     }
 
-    function updateArrow() {
-      const dx = destCoords.x - userPosition.x;
-      const dy = destCoords.y - userPosition.y;
-      const distance = Math.hypot(dx, dy);
-      const bearingToDest = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
-      const relativeBearing = ((bearingToDest - deviceHeading) + 360) % 360;
-      const smoothingFactor = 0.08;
-      const diff = ((relativeBearing - currentArrowRotation + 540) % 360) - 180;
-      currentArrowRotation += diff * smoothingFactor;
+  function updateArrow() {
+    const dx = destCoords.x - userPosition.x;
+    const dy = destCoords.y - userPosition.y;
+    const distance = Math.hypot(dx, dy);
+  
+    // Bearing from user to destination
+    const bearingToDest = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
+  
+    // Compute how far off your current heading is from that bearing
+    const relativeBearing = ((bearingToDest - deviceHeading) + 360) % 360;
+  
+    // Smooth rotation so it doesn’t snap
+    const smoothingFactor = 0.1;
+    const diff = ((relativeBearing - currentArrowRotation + 540) % 360) - 180;
+    currentArrowRotation += diff * smoothingFactor;
+  
+    // Apply rotation to arrow in CAMERA SPACE
+    const arrowObj = arrow3d.object3D;
+    arrowObj.position.set(0, -0.3, -1.5); // stays in front of camera
+    arrowObj.rotation.set(0, THREE.MathUtils.degToRad(currentArrowRotation), 0);
+  
+    // Proximity info
+    let proximity = "Far";
+    if (distance < 2) proximity = "Close";
+    else if (distance < 5) proximity = "Near";
+  
+    progressPrompt.textContent = `${proximity} (${distance.toFixed(1)}m)`;
+    arrivalPrompt.style.display = (distance < ARRIVAL_RADIUS) ? "block" : "none";
+  
+    requestAnimationFrame(updateArrow);
+}
 
-      const cam = document.getElementById("camera");
-      const camObj = cam.object3D;
-      const arrowObj = arrow3d.object3D;
-
-      // keep arrow positioned in front of the camera
-      const forward = new THREE.Vector3(0, -0.3, -1.5);
-      forward.applyQuaternion(camObj.quaternion);
-      arrowObj.position.copy(camObj.position).add(forward);
-
-      // rotate arrow toward destination
-      arrowObj.rotation.set(0, THREE.MathUtils.degToRad(currentArrowRotation), 0);
-
-      let proximity = "Far";
-      if (distance < 2) proximity = "Close";
-      else if (distance < 5) proximity = "Near";
-      progressPrompt.textContent = `${proximity} (${distance.toFixed(1)}m)`;
-      arrivalPrompt.style.display = (distance < ARRIVAL_RADIUS) ? "block" : "none";
-
-      requestAnimationFrame(updateArrow);
-    }
   </script>
 </body>
 </html>
