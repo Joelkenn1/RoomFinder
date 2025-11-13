@@ -58,45 +58,20 @@
       cursor: pointer;
     }
 
-    #destinationPrompt {
+    #destinationPrompt, #progressPrompt, #arrivalPrompt {
       position: absolute;
-      top: 3%;
       left: 50%;
       transform: translateX(-50%);
       background: rgba(0,0,0,0.6);
       color: white;
       padding: 8px 16px;
       border-radius: 6px;
-      font-size: 1.3rem;
       z-index: 5;
     }
 
-    #progressPrompt {
-      position: absolute;
-      top: 18%;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(0,0,0,0.6);
-      color: white;
-      padding: 8px 16px;
-      border-radius: 6px;
-      font-size: 1.1rem;
-      z-index: 5;
-    }
-
-    #arrivalPrompt {
-      display: none;
-      position: absolute;
-      bottom: 10%;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(0,0,0,0.7);
-      color: white;
-      font-size: 1.2rem;
-      padding: 10px 20px;
-      border-radius: 8px;
-      z-index: 5;
-    }
+    #destinationPrompt { top: 3%; font-size: 1.3rem; }
+    #progressPrompt { top: 18%; font-size: 1.1rem; }
+    #arrivalPrompt { display: none; bottom: 10%; font-size: 1.2rem; background: rgba(0,0,0,0.7); padding: 10px 20px; }
   </style>
 </head>
 
@@ -120,14 +95,13 @@
            loading-screen="enabled: false"
            device-orientation-permission-ui="enabled: false">
 
-    <!-- Camera -->
-    <a-entity id="camera" camera look-controls="touchEnabled: false" magicWindowTrackingEnabled="true"></a-entity>
-
-    <!-- Arrow directly in scene -->
-    <a-entity id="arrow3d">
-      <a-entity id="arrowVisual" geometry="primitive: cone; radiusBottom: 0.15; height: 0.5"
-                material="color:red"
-                animation="property: position; to: 0 -0.25 0; dir: alternate; dur: 1200; loop: true">
+    <!-- Camera with arrow as child -->
+    <a-entity id="camera" camera look-controls="touchEnabled: false" magicWindowTrackingEnabled="true">
+      <a-entity id="arrow3d">
+        <a-entity id="arrowVisual" geometry="primitive: cone; radiusBottom: 0.15; height: 0.5"
+                  material="color:red"
+                  animation="property: position; to: 0 -0.25 0; dir: alternate; dur: 1200; loop: true">
+        </a-entity>
       </a-entity>
     </a-entity>
 
@@ -176,13 +150,11 @@
 
     /* ----------------- URL Params ----------------- */
     function normalize(str) { return str?.trim(); }
-
     const params = new URLSearchParams(window.location.search);
     const campus = normalize(params.get("campus"));
     const building = normalize(params.get("building"));
     const startRoom = normalize(params.get("start"));
     const destRoom = normalize(params.get("dest"));
-
     const buildingMap = maps?.[campus]?.[building];
     const startCoords = buildingMap?.[startRoom];
     const destCoords = buildingMap?.[destRoom];
@@ -200,9 +172,9 @@
     let deviceHeading = 0;
     let userPosition = { ...startCoords };
 
-    /* ----------------- Motion Access ----------------- */
+    /* ----------------- Motion & Orientation ----------------- */
     async function initCamera(){
-       try {
+      try {
         const stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:"environment" } });
         video.srcObject = stream;
       } catch(e){ alert("Camera access failed: "+e.message); }
@@ -232,7 +204,6 @@
       requestAnimationFrame(updateArrow);
     }
 
-    /* ----------------- Orientation ----------------- */
     function handleOrientation(e) {
       if (e.webkitCompassHeading !== undefined) {
         deviceHeading = e.webkitCompassHeading;
@@ -245,67 +216,53 @@
       destinationPrompt.textContent = `Heading: ${deviceHeading.toFixed(0)}° | ${destinationName}`;
     }
 
-    /* ----------------- Motion (Step Detection) ----------------- */
+    /* ----------------- Step Detection ----------------- */
     function handleMotion(e) {
       const acc = e.accelerationIncludingGravity;
       if (!acc) return;
-
-      const magnitude = Math.sqrt(acc.x ** 2 + acc.y ** 2 + acc.z ** 2);
+      const magnitude = Math.sqrt(acc.x**2 + acc.y**2 + acc.z**2);
       accelBuffer.push(magnitude);
       if (accelBuffer.length > bufferSize) accelBuffer.shift();
 
-      const avg = accelBuffer.reduce((a, b) => a + b, 0) / accelBuffer.length;
+      const avg = accelBuffer.reduce((a,b)=>a+b,0)/accelBuffer.length;
+      const baseline = accelBuffer.slice(0, bufferSize-3).reduce((a,b)=>a+b,0)/(bufferSize-3);
       const now = Date.now();
-
-      const baseline = accelBuffer.slice(0, bufferSize - 3).reduce((a, b) => a + b, 0) / (bufferSize - 3);
-      if ((avg - baseline) > 0.5 && avg > STEP_THRESHOLD && now - lastStepTime > STEP_COOLDOWN) {
+      if((avg - baseline) > 0.5 && avg > STEP_THRESHOLD && now - lastStepTime > STEP_COOLDOWN){
         lastStepTime = now;
         takeStep();
       }
     }
 
-    function takeStep() {
+    function takeStep(){
       const dx = destCoords.x - userPosition.x;
       const dy = destCoords.y - userPosition.y;
-      const bearingToDest = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
-      const diff = ((bearingToDest - deviceHeading + 540) % 360) - 180;
+      const bearingToDest = (Math.atan2(dy, dx)*180/Math.PI + 360)%360;
+      const diff = ((bearingToDest - deviceHeading + 540)%360)-180;
       const moveFactor = Math.cos(diff * Math.PI / 180);
       const rad = deviceHeading * Math.PI / 180;
-
       userPosition.x += Math.cos(rad) * STEP_LENGTH * moveFactor;
       userPosition.y += Math.sin(rad) * STEP_LENGTH * moveFactor;
     }
 
     /* ----------------- Arrow Update ----------------- */
-    function updateArrow() {
-      const dx = destCoords.x - userPosition.x;
-      const dy = destCoords.y - userPosition.y;
-      const distance = Math.hypot(dx, dy);
-
-      // 1. Place arrow a fixed distance in front of the camera
-      const ARROW_DISTANCE = 1.5;
-      const cameraWorldPos = new THREE.Vector3();
-      const cameraObj = document.getElementById("camera").object3D;
+    function updateArrow(){
       const arrowObj = arrow3d.object3D;
-      cameraObj.getWorldPosition(cameraWorldPos);
-      
-      const cameraDir = new THREE.Vector3();
-      cameraObj.getWorldDirection(cameraDir);
-      
-      // Arrow position in front of camera
-      arrowObj.position.copy(cameraWorldPos).add(cameraDir.multiplyScalar(ARROW_DISTANCE));
-      arrowObj.position.y = cameraWorldPos.y - 0.2; // slight downward offset so cone is visible
-      
-      // 2. Compute vector to destination relative to user
-      const destVector = new THREE.Vector3(destCoords.x - userPosition.x, 0, destCoords.y - userPosition.y);
-      
-      // 3. Compute angle for Y rotation
-      const angleY = Math.atan2(destVector.x, destVector.z);
-      
-      // 4. Rotate arrow
+
+      // 1. Position arrow relative to camera
+      arrowObj.position.set(0, -0.2, -1.5);
+
+      // 2. Compute vector to destination
+      const dx = destCoords.x - userPosition.x;
+      const dz = destCoords.y - userPosition.y;
+
+      // 3. Compute angle
+      const angleY = Math.atan2(dx, dz);
+
+      // 4. Rotate arrow locally
       arrowObj.rotation.set(0, angleY, 0);
 
-      // 4. UI update
+      // 5. Update proximity UI
+      const distance = Math.hypot(dx, dz);
       let proximity = "Far";
       if(distance < 2) proximity = "Close";
       else if(distance < 5) proximity = "Near";
