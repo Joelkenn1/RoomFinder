@@ -4,75 +4,39 @@
   <title>AR Room Finder</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-
   <style>
     html, body {
-      margin: 0; padding: 0;
-      overflow: hidden;
-      height: 100%; width: 100%;
-      background-color: black;
-      font-family: sans-serif;
+      margin:0; padding:0; overflow:hidden; width:100%; height:100%; background:black; font-family:sans-serif;
     }
-
     video#cameraFeed {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100vw; height: 100vh;
-      object-fit: cover;
-      z-index: 0;
+      position:fixed; top:0; left:0; width:100vw; height:100vh; object-fit:cover; z-index:0;
     }
-
     a-scene {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100vw; height: 100vh;
-      z-index: 1;
-      pointer-events: none;
+      position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:1; pointer-events:none;
     }
-
-    #destinationPrompt, #progressPrompt, #arrivalPrompt {
-      position: absolute;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(0,0,0,0.6);
-      color: white;
-      padding: 8px 16px;
-      border-radius: 6px;
-      z-index: 5;
-      text-align: center;
-    }
-
-    #destinationPrompt { top: 3%; font-size: 1.25rem; }
-    #progressPrompt { top: 18%; font-size: 1.1rem; }
-    #arrivalPrompt {
-      display: none;
-      bottom: 10%;
-      font-size: 1.2rem;
-    }
-
     #motionOverlay {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100vw; height: 100vh;
-      background: rgba(0,0,0,0.85);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 10;
+      position: fixed; top:0; left:0; width:100vw; height:100vh;
+      background: rgba(0,0,0,0.85); display:flex; justify-content:center; align-items:center; z-index:10;
     }
-
     #motionButton {
-      font-size: 2rem;
-      padding: 1rem 2rem;
-      background-color: rgba(0,0,0,0.5);
-      color: white;
-      border: 2px solid white;
-      border-radius: 8px;
-      cursor: pointer;
+      font-size:2rem; padding:1rem 2rem; background-color:rgba(0,0,0,0.5); color:white;
+      border:2px solid white; border-radius:8px; cursor:pointer;
     }
+    #destinationPrompt, #progressPrompt, #stopGoPrompt {
+      position:absolute; left:50%; transform:translateX(-50%);
+      background: rgba(0,0,0,0.6); color:white; padding:8px 16px; border-radius:6px; z-index:5; text-align:center;
+    }
+    #destinationPrompt { top:3%; font-size:1.25rem; }
+    #progressPrompt { top:18%; font-size:1.1rem; }
+    #stopGoPrompt { bottom:15%; font-size:1.3rem; display:none; }
+    .step-button {
+      position:absolute; bottom:5%; padding:12px 20px; font-size:1.2rem; border-radius:8px; border:none; cursor:pointer; z-index:5;
+    }
+    #simulatePrev { left:10%; }
+    #simulateNext { right:10%; }
+    #findRoom { bottom:5%; left:50%; transform:translateX(-50%); display:none; }
   </style>
 </head>
-
 <body>
   <video id="cameraFeed" autoplay playsinline></video>
 
@@ -82,24 +46,19 @@
 
   <div id="destinationPrompt">Destination: Loading...</div>
   <div id="progressPrompt">Loading navigation...</div>
-  <div id="arrivalPrompt">You've arrived!</div>
+  <div id="stopGoPrompt">STOP</div>
 
-  <a-scene id="sceneRoot"
-           embedded
-           visible="false"
-           renderer="antialias: true; alpha: true;"
-           vr-mode-ui="enabled: false"
-           xr-mode-ui="enabled: false"
-           loading-screen="enabled: false"
-           device-orientation-permission-ui="enabled: false">
+  <button id="simulatePrev" class="step-button">Simulate Steps</button>
+  <button id="simulateNext" class="step-button">Simulate Next Steps</button>
+  <button id="findRoom" class="step-button">Find Another Room</button>
 
-    <!-- camera remains, but arrow is now a sibling so it can be placed in world space -->
-    <a-entity id="camera" camera look-controls="touchEnabled: false"></a-entity>
-
-    <a-entity id="arrow3d"
-        geometry="primitive: cone; radiusBottom: 0.15; height: 0.5"
-        material="color: red"
-        position="0 -0.3 -1.5">
+  <a-scene id="sceneRoot" embedded visible="false" renderer="antialias:true; alpha:true"
+           vr-mode-ui="enabled:false" xr-mode-ui="enabled:false" loading-screen="enabled:false"
+           device-orientation-permission-ui="enabled:false">
+    <a-entity id="camera" camera look-controls="touchEnabled:false">
+      <a-entity id="arrow3d" geometry="primitive:cone; radiusBottom:0.15; height:0.5"
+                material="color:red" position="0 -0.3 -1.5">
+      </a-entity>
     </a-entity>
   </a-scene>
 
@@ -107,50 +66,39 @@
     // ==========================
     // CONFIG
     // ==========================
+    const STEP_ANIM_TIME = 5000; // 5s per step animation
+    const STEP_FRACTION_MIN = 5; // min steps per fraction
     const ARRIVAL_RADIUS = 1.5;
-    const MOVE_SPEED = 0.03;            // arrow forward speed (virtual map units)
-    const MAX_ARROW_DISTANCE = 4.0;     // how far arrow can be from user before it pauses
-    const MIN_ARROW_DISTANCE = 1.0;     // how close user must get to resume arrow
-    const BOB_SPEED = 2.0;
-    const BOB_AMPLITUDE = 0.05;
-    const APPROACH_SCALE_THRESHOLD = 0.003;
 
     // ==========================
-    // DOM REFERENCES
+    // DOM
     // ==========================
     const arrow3d = document.getElementById("arrow3d");
-    const cameraEl = document.getElementById("camera");
     const progressPrompt = document.getElementById("progressPrompt");
-    const arrivalPrompt = document.getElementById("arrivalPrompt");
     const destinationPrompt = document.getElementById("destinationPrompt");
+    const stopGoPrompt = document.getElementById("stopGoPrompt");
+    const simulatePrevBtn = document.getElementById("simulatePrev");
+    const simulateNextBtn = document.getElementById("simulateNext");
+    const findRoomBtn = document.getElementById("findRoom");
     const video = document.getElementById("cameraFeed");
 
     // ==========================
-    // LOCATION DATA (unchanged)
+    // LOCATION DATA (keep original)
     // ==========================
-    function normalize(str) { return str?.trim(); }
-
+    function normalize(str){ return str?.trim(); }
     const maps = {
       MainCampus: {
         EngineeringHall: {
-          Room101: { x: 10, y: 5 },
-          Room102: { x: 12, y: 5 },
-          Room201: { x: 10, y: 10 },
-          Room202: { x: 12, y: 10 },
-          Lobby: { x: 5, y: 2 },
-          Entrance: { x: 0, y: 0 }
+          Room101:{x:10,y:5}, Room102:{x:12,y:5}, Room201:{x:10,y:10}, Room202:{x:12,y:10},
+          Lobby:{x:5,y:2}, Entrance:{x:0,y:0}
         },
         Library: {
-          Room301: { x: 8, y: 3 },
-          Room302: { x: 9, y: 6 },
-          Entrance: { x: 0, y: 0 }
+          Room301:{x:8,y:3}, Room302:{x:9,y:6}, Entrance:{x:0,y:0}
         }
       },
       ArmstrongCampus: {
-        ScienceCenter: {
-          Room401: { x: 15, y: 10 },
-          Room402: { x: 17, y: 12 },
-          Entrance: { x: 0, y: 0 }
+        ScienceCenter:{
+          Room401:{x:15,y:10}, Room402:{x:17,y:12}, Entrance:{x:0,y:0}
         }
       }
     };
@@ -161,185 +109,136 @@
     const startRoom = normalize(params.get("start"));
     const destRoom = normalize(params.get("dest"));
 
-    const buildingMap = maps?.[campus]?.[building];
+    const buildingMap = maps[campus]?.[building];
     const startCoords = buildingMap?.[startRoom];
     const destCoords = buildingMap?.[destRoom];
+    const destinationName = destRoom.toUpperCase();
 
-    const destinationName = destRoom ? destRoom.toUpperCase() : "Unknown";
-
-    if (!startCoords || !destCoords) {
+    if(!startCoords || !destCoords){
       alert("Invalid campus, building, or room selection.");
     } else {
-      destinationPrompt.textContent = "Destination: " + destinationName;
+      destinationPrompt.textContent = "Destination: "+destinationName;
     }
 
     // ==========================
     // CAMERA INIT
     // ==========================
-    async function initCamera() {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment" }
-        });
+    async function initCamera(){
+      try{
+        const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}});
         video.srcObject = stream;
-      } catch (err) {
-        alert("Camera access failed: " + err.message);
-      }
+      } catch(err){ alert("Camera access failed: "+err.message); }
     }
 
-    // ==========================
-    // ENABLE MOTION - capture world origin at this time
-    // ==========================
-    let worldOrigin = new THREE.Vector3(); // maps startCoords -> this world origin
-    async function enableMotion() {
+    async function enableMotion(){
       const overlay = document.getElementById("motionOverlay");
       const scene = document.getElementById("sceneRoot");
-
-      try {
-        if (typeof DeviceOrientationEvent?.requestPermission === "function") {
-          const permission = await DeviceOrientationEvent.requestPermission();
-          if (permission !== "granted") {
-            alert("Motion permission denied.");
-            return;
-          }
+      try{
+        if(typeof DeviceOrientationEvent?.requestPermission==="function"){
+          const perm = await DeviceOrientationEvent.requestPermission();
+          if(perm!=="granted"){ alert("Motion permission denied."); return; }
         }
-      } catch (e) {
-        /* ignore - ios may throw if not supported; we still proceed */
-      }
-
-      overlay.style.display = "none";
-      scene.setAttribute("visible", "true");
-
+      } catch(e){ alert("Motion permission error: "+e); return; }
+      overlay.style.display="none";
+      scene.setAttribute("visible","true");
       await initCamera();
-
-      // capture camera world position at the moment we start — treat that as origin mapping to startCoords
-      const camObj = cameraEl.object3D;
-      camObj.updateMatrixWorld();
-      camObj.getWorldPosition(worldOrigin);
-
-      // start update loop
       startTracking();
     }
 
     // ==========================
-    // VIRTUAL + WORLD STATE
+    // NAVIGATION STATE
     // ==========================
-    // virtual map coordinates (2D): x,y
-    let arrowPos = { x: startCoords.x, y: startCoords.y };   // arrow's location in virtual map
-    let userPos = { x: startCoords.x, y: startCoords.y };    // user's virtual map location (changes only when user "catches up")
-    let arrowPaused = false;
-    let prevScale = 1;
-    let time = 0;
-    let navigationReady = (startCoords && destCoords);
-
-    function mapToWorld(vx, vy) {
-      // Map virtual (map-x, map-y) to world coords using worldOrigin as camera start origin.
-      // We'll align map x -> world X, map y -> world Z
-      const wx = worldOrigin.x + (vx - startCoords.x);
-      const wy = worldOrigin.y; // keep roughly camera height
-      const wz = worldOrigin.z + (vy - startCoords.y);
-      return new THREE.Vector3(wx, wy, wz);
-    }
-
-    function distance2(a, b) {
-      return Math.hypot(a.x - b.x, a.y - b.y);
-    }
+    let currentPos = {x:startCoords.x, y:startCoords.y};
+    let remainingDistance = Math.hypot(destCoords.x-startCoords.x, destCoords.y-startCoords.y);
+    let stepFractions = [];
+    let stepIndex = 0;
+    const MAX_FRACTIONS = Math.ceil(remainingDistance/2); // farther = more fractions
 
     // ==========================
-    // TRACK + UPDATE
+    // TRACKING + ARROW
     // ==========================
-    function startTracking() {
+    function startTracking(){
       requestAnimationFrame(updateArrow);
     }
 
-    function updateArrow() {
-      time += 0.016;
-
-      if (!navigationReady) {
-        progressPrompt.textContent = "Loading navigation...";
-        requestAnimationFrame(updateArrow);
-        return;
-      }
-
-      // virtual distances
-      const dxAD = destCoords.x - arrowPos.x;
-      const dyAD = destCoords.y - arrowPos.y;
-      const distArrowToDest = Math.hypot(dxAD, dyAD);
-
-      const dxAU = arrowPos.x - userPos.x;
-      const dyAU = arrowPos.y - userPos.y;
-      const distArrowToUser = Math.hypot(dxAU, dyAU);
-
-      // compute direction from arrow to dest (virtual)
-      const angleToDest = Math.atan2(dyAD, dxAD); // radians
-
-      // --- move arrow forward in virtual map ONLY if not paused and not arrived
-      if (distArrowToDest > ARRIVAL_RADIUS && !arrowPaused) {
-        // advance arrow along direction toward destination
-        const step = Math.min(MOVE_SPEED, distArrowToDest);
-        arrowPos.x += Math.cos(angleToDest) * step;
-        arrowPos.y += Math.sin(angleToDest) * step;
-      }
-
-      // Update remainingDistance based on arrow's virtual position -> destination
-      const remainingDistance = Math.hypot(destCoords.x - arrowPos.x, destCoords.y - arrowPos.y);
-
-      // --- Determine whether arrow should pause/resume based on user distance
-      if (distArrowToUser > MAX_ARROW_DISTANCE) {
-        arrowPaused = true;
-      } else if (distArrowToUser < MIN_ARROW_DISTANCE) {
-        arrowPaused = false;
-      }
-
-      // --- Visual placement: place arrow in world coordinates relative to worldOrigin
-      // convert arrowPos (virtual) -> world coords
-      const arrowWorld = mapToWorld(arrowPos.x, arrowPos.y);
-
-      // bobbing effect
-      const bobY = -0.3 + Math.sin(time * BOB_SPEED) * BOB_AMPLITUDE;
-
-      // Set arrow world Y slightly relative to camera height (worldOrigin.y) + bob
-      arrow3d.object3D.position.set(arrowWorld.x, worldOrigin.y - 0.3 + bobY, arrowWorld.z);
-
-      // --- rotation: make arrow face toward destination (in world/map space)
-      // compute angle in world around Y: because map Y->world Z and map X->world X, rotate accordingly
-      arrow3d.object3D.rotation.set(0, -angleToDest, 0);
-
-      // --- scale: base on dist from user to arrow (visual depth)
-      const scale = 1 / (1 + distArrowToUser * 0.25);
-      arrow3d.object3D.scale.set(scale, scale, scale);
-
-      // --- Visual-based "user catch-up": if arrow appears larger than previous frame and arrow was paused,
-      // assume user moved closer and advance userPos toward arrow slightly.
-      if (scale > prevScale + APPROACH_SCALE_THRESHOLD && arrowPaused) {
-        // pull userPos toward arrowPos a bit (simulate real user closing the gap)
-        const pull = 0.15; // virtual map units
-        const dirX = arrowPos.x - userPos.x;
-        const dirY = arrowPos.y - userPos.y;
-        const d = Math.hypot(dirX, dirY);
-        if (d > 0.001) {
-          userPos.x += (dirX / d) * pull;
-          userPos.y += (dirY / d) * pull;
-        }
-      }
-
-      prevScale = scale;
-
-      // --- UI updates (remainingDistance shown is based on arrow -> dest)
-      if (remainingDistance <= ARRIVAL_RADIUS) {
-        arrivalPrompt.style.display = "block";
-        progressPrompt.textContent = "Arrived at " + destinationName;
-      } else {
-        let proximity = "Far";
-        if (remainingDistance < 2) proximity = "Close";
-        else if (remainingDistance < 5) proximity = "Near";
-        progressPrompt.textContent = `${proximity} (${remainingDistance.toFixed(1)}m)`;
-      }
-
+    function updateArrow(){
+      if(!remainingDistance) return;
+      const dx = destCoords.x - currentPos.x;
+      const dy = destCoords.y - currentPos.y;
+      const angle = Math.atan2(dy, dx);
+      arrow3d.object3D.rotation.set(0,-angle,0);
+      // Distance display
+      progressPrompt.textContent = `Distance: ${remainingDistance.toFixed(1)}m`;
       requestAnimationFrame(updateArrow);
     }
 
-    // start the loop so UI isn't blank
+    // ==========================
+    // STEP ANIMATION LOGIC
+    // ==========================
+    function generateStepPositions(fractionDistance){
+      const steps = Math.max(Math.floor(fractionDistance),STEP_FRACTION_MIN);
+      const positions = [];
+      for(let i=1;i<=steps;i++){
+        const t = i/steps;
+        const spread = (Math.random()*0.4-0.2); // slight arc
+        positions.push({x:t*dxWithAngle()*Math.cos(angleWithDXDY())+spread, z:-t*dxWithAngle()*Math.sin(angleWithDXDY())});
+      }
+      return positions;
+    }
+
+    function dxWithAngle(){ return destCoords.x-currentPos.x; }
+    function angleWithDXDY(){ return Math.atan2(destCoords.y-currentPos.y, destCoords.x-currentPos.x); }
+
+    function animateSteps(fractionDistance){
+      stopGoPrompt.style.display="block"; stopGoPrompt.textContent="STOP";
+      simulatePrevBtn.disabled=true; simulateNextBtn.disabled=true;
+      const positions = generateStepPositions(fractionDistance);
+      const scene = document.querySelector("a-scene");
+
+      positions.forEach(pos=>{
+        const step = document.createElement("a-circle");
+        step.setAttribute("position", `${pos.x} 0 ${pos.z}`);
+        step.setAttribute("radius", "0.1");
+        step.setAttribute("color","red");
+        step.setAttribute("rotation","-90 0 0");
+        scene.appendChild(step);
+        setTimeout(()=>{ step.remove(); }, STEP_ANIM_TIME);
+      });
+
+      setTimeout(()=>{
+        stopGoPrompt.textContent="GO";
+        simulatePrevBtn.disabled=false; simulateNextBtn.disabled=false;
+      }, STEP_ANIM_TIME);
+    }
+
+    // ==========================
+    // BUTTON HANDLERS
+    // ==========================
+    simulatePrevBtn.onclick = function(){
+      const dx = destCoords.x-currentPos.x;
+      const dy = destCoords.y-currentPos.y;
+      const dist = Math.hypot(dx,dy)/MAX_FRACTIONS;
+      animateSteps(dist);
+    };
+
+    simulateNextBtn.onclick = function(){
+      const dx = destCoords.x-currentPos.x;
+      const dy = destCoords.y-currentPos.y;
+      const dist = Math.hypot(dx,dy)/MAX_FRACTIONS;
+      currentPos.x += dx/MAX_FRACTIONS;
+      currentPos.y += dy/MAX_FRACTIONS;
+      remainingDistance = Math.hypot(destCoords.x-currentPos.x, destCoords.y-currentPos.y);
+
+      if(remainingDistance<=ARRIVAL_RADIUS){
+        simulatePrevBtn.disabled=true;
+        simulateNextBtn.disabled=true;
+        findRoomBtn.style.display="block";
+      }
+      animateSteps(dist);
+    };
+
+    findRoomBtn.onclick=function(){ window.location.href="Select.html"; };
+
     requestAnimationFrame(updateArrow);
   </script>
 </body>
