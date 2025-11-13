@@ -4,26 +4,26 @@
   <title>AR Room Finder</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-
   <style>
-    html, body { margin:0; padding:0; overflow:hidden; width:100%; height:100%; background:black; font-family:sans-serif; }
-    video#cameraFeed { position:fixed; top:0; left:0; width:100vw; height:100vh; object-fit:cover; z-index:0; }
-    a-scene { position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:1; pointer-events:none; }
+    html, body { margin: 0; padding: 0; overflow: hidden; height: 100%; background: black; }
+    video#cameraFeed { position: fixed; width: 100vw; height: 100vh; object-fit: cover; z-index: 0; }
+    a-scene { position: fixed; width: 100vw; height: 100vh; z-index: 1; pointer-events: none; }
     #destinationPrompt, #progressPrompt, #arrivalPrompt {
-      position:absolute; left:50%; transform:translateX(-50%);
-      background: rgba(0,0,0,0.6); color:white; padding:8px 16px; border-radius:6px; z-index:5; text-align:center;
+      position: absolute; left: 50%; transform: translateX(-50%);
+      background: rgba(0,0,0,0.6); color: white; padding: 8px 16px;
+      border-radius: 6px; z-index: 5; text-align: center;
     }
-    #destinationPrompt { top:3%; font-size:1.25rem; }
-    #progressPrompt { top:18%; font-size:1.1rem; }
-    #arrivalPrompt { display:none; bottom:10%; font-size:1.2rem; }
-
+    #destinationPrompt { top: 3%; font-size: 1.25rem; }
+    #progressPrompt { top: 18%; font-size: 1.1rem; }
+    #arrivalPrompt { display: none; bottom: 10%; font-size: 1.2rem; }
     #motionOverlay {
-      position:fixed; top:0; left:0; width:100vw; height:100vh;
-      background: rgba(0,0,0,0.85); display:flex; align-items:center; justify-content:center; z-index:10;
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(0,0,0,0.85); display: flex; align-items: center;
+      justify-content: center; z-index: 10;
     }
     #motionButton {
-      font-size:2rem; padding:1rem 2rem;
-      background-color: rgba(0,0,0,0.5); color:white; border:2px solid white; border-radius:8px; cursor:pointer;
+      font-size: 2rem; padding: 1rem 2rem; background-color: rgba(0,0,0,0.5);
+      color: white; border: 2px solid white; border-radius: 8px; cursor: pointer;
     }
   </style>
 </head>
@@ -39,47 +39,41 @@
   <div id="arrivalPrompt">You've arrived!</div>
 
   <a-scene id="sceneRoot"
-           embedded visible="false"
-           renderer="antialias:true; alpha:true"
-           vr-mode-ui="enabled:false"
-           xr-mode-ui="enabled:false"
-           loading-screen="enabled:false"
-           device-orientation-permission-ui="enabled:false">
+           embedded
+           visible="false"
+           renderer="antialias: true; alpha: true"
+           vr-mode-ui="enabled: false"
+           xr-mode-ui="enabled: false"
+           loading-screen="enabled: false"
+           device-orientation-permission-ui="enabled: false">
 
-    <a-entity id="camera" camera look-controls="touchEnabled:false"></a-entity>
-
-    <!-- Arrow independent of camera -->
-    <a-entity id="arrow3d"
-              geometry="primitive:cone; radiusBottom:0.15; height:0.5"
-              material="color:red"
-              position="0 0 -3">
+    <a-entity id="camera" camera look-controls="touchEnabled: false">
+      <!-- Arrow fixed in front of camera -->
+      <a-entity id="arrow3d"
+                geometry="primitive: cone; radiusBottom: 0.15; height: 0.5"
+                material="color: red"
+                position="0 -0.3 -2">
+      </a-entity>
     </a-entity>
   </a-scene>
 
   <script>
-    // ======================
-    // CONFIG
-    // ======================
-    const ARRIVAL_RADIUS = 1.5;
-    const arrow3d = document.getElementById("arrow3d");
-    const progressPrompt = document.getElementById("progressPrompt");
-    const arrivalPrompt = document.getElementById("arrivalPrompt");
-    const destinationPrompt = document.getElementById("destinationPrompt");
-    const video = document.getElementById("cameraFeed");
-
-    // ======================
-    // LOCATION DATA
-    // ======================
+    // === MAP DATA ===
     function normalize(str){ return str?.trim(); }
-
     const maps = {
       MainCampus: {
         EngineeringHall: {
-          Room101:{x:10,y:5}, Room102:{x:12,y:5}, Room201:{x:10,y:10}, Room202:{x:12,y:10}, Lobby:{x:5,y:2}, Entrance:{x:0,y:0}
+          Room101:{x:10,y:0,z:5}, Room102:{x:12,y:0,z:5},
+          Room201:{x:10,y:2,z:10}, Room202:{x:12,y:2,z:10},
+          Lobby:{x:5,y:0,z:2}, Entrance:{x:0,y:0,z:0}
         },
-        Library: { Room301:{x:8,y:3}, Room302:{x:9,y:6}, Entrance:{x:0,y:0} }
+        Library: {
+          Room301:{x:8,y:0,z:3}, Room302:{x:9,y:1,z:6}, Entrance:{x:0,y:0,z:0}
+        }
       },
-      ArmstrongCampus: { ScienceCenter:{ Room401:{x:15,y:10}, Room402:{x:17,y:12}, Entrance:{x:0,y:0} } }
+      ArmstrongCampus: {
+        ScienceCenter:{ Room401:{x:15,y:0,z:10}, Room402:{x:17,y:0,z:12}, Entrance:{x:0,y:0,z:0} }
+      }
     };
 
     const params = new URLSearchParams(window.location.search);
@@ -87,21 +81,27 @@
     const building = normalize(params.get("building"));
     const startRoom = normalize(params.get("start"));
     const destRoom = normalize(params.get("dest"));
-
     const buildingMap = maps?.[campus]?.[building];
     const startCoords = buildingMap?.[startRoom];
     const destCoords = buildingMap?.[destRoom];
-    const destinationName = destRoom.toUpperCase();
+    const destinationName = destRoom?.toUpperCase?.() || "Unknown";
 
-    if(!startCoords||!destCoords){ alert("Invalid campus, building, or room selection."); }
-    else { destinationPrompt.textContent = "Destination: "+destinationName; }
+    const video = document.getElementById("cameraFeed");
+    const arrow3d = document.getElementById("arrow3d");
+    const progressPrompt = document.getElementById("progressPrompt");
+    const arrivalPrompt = document.getElementById("arrivalPrompt");
+    const destinationPrompt = document.getElementById("destinationPrompt");
 
-    // ======================
-    // CAMERA INIT
-    // ======================
+    if(!startCoords || !destCoords){
+      alert("Invalid campus, building, or room.");
+    } else {
+      destinationPrompt.textContent = "Destination: " + destinationName;
+    }
+
+    // === CAMERA + MOTION ===
     async function initCamera(){
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video:{facingMode:"environment"} });
+        const stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:"environment" } });
         video.srcObject = stream;
       } catch(e){ alert("Camera access failed: "+e.message); }
     }
@@ -110,57 +110,66 @@
       const overlay = document.getElementById("motionOverlay");
       const scene = document.getElementById("sceneRoot");
 
-      try{
-        if(typeof DeviceOrientationEvent?.requestPermission==="function"){
+      try {
+        if(typeof DeviceOrientationEvent?.requestPermission === "function") {
           const permission = await DeviceOrientationEvent.requestPermission();
-          if(permission!=="granted"){ alert("Motion permission denied."); return; }
+          if(permission !== "granted") { alert("Motion permission denied."); return; }
         }
-      }catch(e){ alert("Motion permission error: "+e); return; }
+      } catch(e) { alert("Motion permission error: "+e); return; }
 
-      overlay.style.display="none";
-      scene.setAttribute("visible","true");
+      overlay.style.display = "none";
+      scene.setAttribute("visible", "true");
       await initCamera();
       startArrowTracking();
     }
 
-    // ======================
-    // ARROW LOGIC
-    // ======================
-    let deviceHeading = 0;
+    // === ROTATION LOGIC ===
+    let deviceYaw = 0; // current orientation from compass
 
     function startArrowTracking(){
-      window.addEventListener("deviceorientation", e => {
-        if(e.alpha!==null) deviceHeading = e.alpha * (Math.PI/180);
+      window.addEventListener("deviceorientationabsolute", e => {
+        if(e.alpha !== null) deviceYaw = e.alpha * (Math.PI/180); // convert to radians
       });
-
       requestAnimationFrame(updateArrow);
     }
 
     function updateArrow(){
-      if(!startCoords||!destCoords){
+      if(!startCoords || !destCoords){
         progressPrompt.textContent = "Loading navigation...";
         requestAnimationFrame(updateArrow);
         return;
       }
 
-      // Compute vector from start to destination
+      // vector from start to destination
       const dx = destCoords.x - startCoords.x;
       const dy = destCoords.y - startCoords.y;
-      const distance = Math.hypot(dx, dy);
+      const dz = destCoords.z - startCoords.z;
+      const distance = Math.sqrt(dx*dx + dy*dy + dz*dz);
 
-      // Rotate arrow to point to destination (subtract device heading)
-      const angle = Math.atan2(dy, dx);
-      arrow3d.object3D.rotation.set(0, -angle + deviceHeading, 0);
+      // yaw (left-right) and pitch (up-down) toward destination in world space
+      const worldYaw = Math.atan2(dx, dz);
+      const worldPitch = Math.atan2(dy, Math.sqrt(dx*dx + dz*dz));
 
-      // Update proximity text
-      if(distance <= ARRIVAL_RADIUS){
-        arrivalPrompt.style.display="block";
-        progressPrompt.textContent = "Arrived at "+destinationName;
+      // Adjust relative to user heading
+      let relativeYaw = worldYaw - deviceYaw;
+
+      // Normalize to [-π, π]
+      if(relativeYaw > Math.PI) relativeYaw -= 2*Math.PI;
+      if(relativeYaw < -Math.PI) relativeYaw += 2*Math.PI;
+
+      // If user is facing opposite direction (>90° off), arrow should point into camera
+      if(Math.abs(relativeYaw) > Math.PI/2){
+        arrow3d.object3D.rotation.set(-worldPitch, relativeYaw + Math.PI, 0);
       } else {
-        let proximity="Far";
-        if(distance<2) proximity="Close";
-        else if(distance<5) proximity="Near";
-        progressPrompt.textContent=`${proximity} (${distance.toFixed(1)}m)`;
+        arrow3d.object3D.rotation.set(-worldPitch, relativeYaw, 0);
+      }
+
+      // Distance display
+      if(distance <= 1.5){
+        arrivalPrompt.style.display="block";
+        progressPrompt.textContent="Arrived at "+destinationName;
+      } else {
+        progressPrompt.textContent="Distance: "+distance.toFixed(1)+"m";
       }
 
       requestAnimationFrame(updateArrow);
