@@ -298,17 +298,13 @@
     }
 
     /* ----------------- Lock Arrow to Camera ----------------- */
-    // AFRAME.registerComponent('lock-to-camera', {
-    //   tick: function () {
-    //     const camera = this.el.sceneEl.camera.el.object3D;
-    //     const arrow = this.el.object3D;
-    //     arrow.position.copy(camera.position);
-    //     // const forward = new THREE.Vector3(0, -0.3, -1.5);
-    //     // forward.applyQuaternion(camera.quaternion);
-    //     // arrow.position.add(forward);
-    //     arrow.rotation.copy(camera.rotation);
-    //   }
-    // });
+    AFRAME.registerComponent('lock-to-camera', {
+      tick: function () {
+        const camera = this.el.sceneEl.camera.el.object3D;
+        const arrow = this.el.object3D;
+        arrow.rotation.copy(camera.rotation);
+      }
+    });
   </script>
 </body>
 </html>
