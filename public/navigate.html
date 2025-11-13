@@ -73,7 +73,7 @@
 
     #progressPrompt {
       position: absolute;
-      top: 10%;
+      top: 18%;
       left: 50%;
       transform: translateX(-50%);
       background: rgba(0,0,0,0.6);
@@ -111,7 +111,15 @@
   <div id="progressPrompt">Loading navigation...</div>
   <div id="arrivalPrompt">You've arrived!</div>
 
-  <a-scene embedded vr-mode-ui="enabled: false" renderer="antialias: true; alpha: true;">
+  <a-scene id="sceneRoot"
+           embedded
+           visible="false"
+           renderer="antialias: true; alpha: true"
+           vr-mode-ui="enabled: false"
+           xr-mode-ui="enabled: false"
+           loading-screen="enabled: false"
+           device-orientation-permission-ui="enabled: false">
+    
     <a-entity id="camera" camera look-controls="touchEnabled: false">
       <a-entity id="arrow3d"
         geometry="primitive: cone; radiusBottom: 0.15; height: 0.5"
@@ -190,36 +198,27 @@
     let deviceHeading = 0;
     let userPosition = { ...startCoords };
 
-    async function initCamera() {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment" },
-          audio: false
-        });
+    async function initCamera(){
+       try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:"environment" } });
         video.srcObject = stream;
-      } catch (err) {
-        alert("Camera access failed: " + err.message);
-      }
+      } catch(e){ alert("Camera access failed: "+e.message); }
     }
 
-    async function enableMotion() {
+    async function enableMotion(){
       const overlay = document.getElementById("motionOverlay");
+      const scene = document.getElementById("sceneRoot");
 
-      if (typeof DeviceMotionEvent?.requestPermission === "function") {
-        try {
-          const motionPerm = await DeviceMotionEvent.requestPermission();
-          const orientPerm = await DeviceOrientationEvent.requestPermission();
-          if (motionPerm !== "granted" || orientPerm !== "granted") {
-            alert("Motion/orientation permission denied.");
-            return;
-          }
-        } catch (err) {
-          alert("Motion permission error: " + err);
-          return;
+      try {
+        if(typeof DeviceOrientationEvent?.requestPermission === "function") {
+          const permission = await DeviceOrientationEvent.requestPermission();
+          if(permission !== "granted") { alert("Motion permission denied."); return; }
         }
-      }
+      } catch(e) { alert("Motion permission error: "+e); return; }
+
 
       overlay.style.display = "none";
+      scene.setAttribute("visible", "true");
       await initCamera();
       startMotionTracking();
     }
