@@ -120,7 +120,7 @@
            loading-screen="enabled: false"
            device-orientation-permission-ui="enabled: false">
     
-    <a-entity id="camera" camera look-controls="touchEnabled: false">
+    <a-entity id="camera" camera look-controls="touchEnabled: false" magicWindowTrackingEnabled: true">
       <a-entity id="arrow3d"
         geometry="primitive: cone; radiusBottom: 0.15; height: 0.5"
         material="color: red"
@@ -230,8 +230,19 @@
     }
 
     function handleOrientation(e) {
-      if (e.alpha !== null) deviceHeading = e.alpha;
+      // Prefer the absolute compass heading if available (Safari / iOS)
+      if (e.webkitCompassHeading !== undefined) {
+        deviceHeading = e.webkitCompassHeading; // 0° = North, increases clockwise
+      } 
+      else if (e.absolute === true && e.alpha !== null) {
+        // Convert alpha to compass-like heading
+        deviceHeading = 360 - e.alpha; // Make it clockwise from North
+      } 
+      else if (e.alpha !== null) {
+        deviceHeading = 360 - e.alpha;
+      }
     }
+
 
     function handleMotion(e) {
       const acc = e.accelerationIncludingGravity;
@@ -270,25 +281,38 @@
       userPosition.y += Math.sin(rad) * STEP_LENGTH * moveFactor;
     }
 
-    function updateArrow() {
-      const dx = destCoords.x - userPosition.x;
-      const dy = destCoords.y - userPosition.y;
-      const distance = Math.hypot(dx, dy);
+let currentArrowRotation = 0; // store the last angle for smooth transitions
 
-      const bearingToDest = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
-      const relativeBearing = (bearingToDest - deviceHeading + 360) % 360;
+function updateArrow() {
+  const dx = destCoords.x - userPosition.x;
+  const dy = destCoords.y - userPosition.y;
+  const distance = Math.hypot(dx, dy);
 
-      arrow3d.object3D.rotation.set(0, THREE.MathUtils.degToRad(relativeBearing), 0);
+  // Compute bearing toward destination (0° = east, normalized to [0, 360))
+  const bearingToDest = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
 
-      let proximity = "Far";
-      if (distance < 2) proximity = "Close";
-      else if (distance < 5) proximity = "Near";
+  // Relative bearing (difference between where device faces and target)
+  const relativeBearing = ((bearingToDest - deviceHeading) + 360) % 360;
 
-      progressPrompt.textContent = `${proximity} (${distance.toFixed(1)}m)`;
-      arrivalPrompt.style.display = (distance < ARRIVAL_RADIUS) ? "block" : "none";
+  // --- Smooth rotation (interpolate between old and new angle) ---
+  const smoothingFactor = 0.08; // lower = smoother/slower
+  const diff = ((relativeBearing - currentArrowRotation + 540) % 360) - 180;
+  currentArrowRotation += diff * smoothingFactor;
 
-      requestAnimationFrame(updateArrow);
-    }
+  // Apply rotation to the 3D arrow
+  arrow3d.object3D.rotation.y = THREE.MathUtils.degToRad(currentArrowRotation);
+
+  // --- Distance + arrival logic ---
+  let proximity = "Far";
+  if (distance < 2) proximity = "Close";
+  else if (distance < 5) proximity = "Near";
+
+  progressPrompt.textContent = `${proximity} (${distance.toFixed(1)}m)`;
+  arrivalPrompt.style.display = (distance < ARRIVAL_RADIUS) ? "block" : "none";
+
+  requestAnimationFrame(updateArrow);
+}
+
   </script>
 </body>
 </html>
