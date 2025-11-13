@@ -121,7 +121,7 @@
            device-orientation-permission-ui="enabled: false">
     
     <a-entity id="camera" camera look-controls="touchEnabled: false" magicWindowTrackingEnabled: true">
-      <a-entity id="arrow3d" position="0 0.1 -1.5">
+      <a-entity id="arrow3d" position="0 -0.3 -1.5" lock-to-camera>
          <a-entity id="arrowVisual" geometry="primitive: cone; radiusBottom: 0.15; height: 0.5" material="color:red"
             animation="property: position; to: 0 -0.25 0; dir: alternate; dur: 1200; loop: true">
         </a-entity>
@@ -286,7 +286,6 @@
       currentArrowRotation += diff * smoothingFactor;
 
       arrow3d.object3D.rotation.set(0, THREE.MathUtils.degToRad(currentArrowRotation), 0);
-      //arrow3d.object3D.rotation.y = THREE.MathUtils.degToRad(currentArrowRotation);
 
       let proximity = "Far";
       if (distance < 2) proximity = "Close";
@@ -299,17 +298,13 @@
     }
 
     /* ----------------- Lock Arrow to Camera ----------------- */
-    // AFRAME.registerComponent('lock-to-camera', {
-    //   tick: function () {
-    //     const camera = this.el.sceneEl.camera.el.object3D;
-    //     const arrow = this.el.object3D;
-
-    //     // Keep arrow in front of camera, relative to camera's position
-    //     const localOffset = new THREE.Vector3(0, 0.1, -1.5); // adjust height and distance
-    //     const worldPosition = cameraObj.localToWorld(localOffset.clone());
-    //     arrowObj.position.copy(worldPosition);
-    //   }
-    // });
+    AFRAME.registerComponent('lock-to-camera', {
+      tick: function () {
+        const camera = this.el.sceneEl.camera.el.object3D;
+        const arrow = this.el.object3D;
+        arrow.rotation.copy(camera.rotation);
+      }
+    });
   </script>
 </body>
 </html>
