@@ -302,12 +302,13 @@
       tick: function () {
         const camera = this.el.sceneEl.camera.el.object3D;
         const arrow = this.el.object3D;
-        const basePos = new THREE.Vector3(0, -0.3, -1.5);
-        const worldPos = camera.localToWorld(basePos.clone());
-        arrow.position.copy(worldPos);
+        arrow.position.copy(camera.position);
+        const forward = new THREE.Vector3(0, -0.3, -1.5);
+        forward.applyQuaternion(camera.quaternion);
+        arrow.position.add(forward);
         arrow.rotation.copy(camera.rotation);
-  }
-});
+      }
+    });
   </script>
 </body>
 </html>
