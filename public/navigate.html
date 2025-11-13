@@ -100,9 +100,11 @@
 
     <!-- Arrow in the scene -->
     <a-entity id="arrow3d" arrow-lock>
-      <a-entity id="arrowVisual" geometry="primitive: cone; radiusBottom: 0.15; height: 0.5"
-                material="color:red"
-                animation="property: position; to: 0 -0.25 0; dir: alternate; dur: 1200; loop: true">
+      <a-entity id="arrowVisual"
+          geometry="primitive: cone; radiusBottom: 0.15; height: 0.5"
+          material="color:red"
+          rotation="-90 0 0"
+          animation="property: position; to: 0 -0.25 0; dir: alternate; dur: 1200; loop: true">
       </a-entity>
     </a-entity>
 
