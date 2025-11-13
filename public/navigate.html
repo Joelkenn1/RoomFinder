@@ -278,25 +278,30 @@
       const dx = destCoords.x - userPosition.x;
       const dy = destCoords.y - userPosition.y;
       const distance = Math.hypot(dx, dy);
-      const bearingToDest = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
-      const relativeBearing = ((bearingToDest - deviceHeading) + 360) % 360;
-
-      const smoothingFactor = 0.1;
-      const diff = ((relativeBearing - currentArrowRotation + 540) % 360) - 180;
-      currentArrowRotation += diff * smoothingFactor;
-
-      arrow3d.object3D.rotation.set(0, THREE.MathUtils.degToRad(currentArrowRotation), 0);
-
+    
+      // Compute angle to destination in radians
+      const angleRad = Math.atan2(dy, dx);
+    
+      // Y-axis rotation (2D plane) quaternion
+      const quaternion = new THREE.Quaternion();
+      quaternion.setFromEuler(new THREE.Euler(0, -angleRad, 0, 'YXZ'));
+    
+      // Apply world rotation to arrow
+      arrow3d.object3D.setRotationFromQuaternion(quaternion);
+    
+      // Keep arrow in front of camera (local position)
+      arrow3d.object3D.position.set(0, 0.1, -1.5);
+    
+      // Update distance prompts
       let proximity = "Far";
-      if (distance < 2) proximity = "Close";
-      else if (distance < 5) proximity = "Near";
-
+      if(distance < 2) proximity = "Close";
+      else if(distance < 5) proximity = "Near";
+    
       progressPrompt.textContent = `${proximity} (${distance.toFixed(1)}m)`;
       arrivalPrompt.style.display = (distance < ARRIVAL_RADIUS) ? "block" : "none";
-
+    
       requestAnimationFrame(updateArrow);
     }
-
     /* ----------------- Lock Arrow to Camera ----------------- */
     AFRAME.registerComponent('lock-to-camera', {
       tick: function() {
