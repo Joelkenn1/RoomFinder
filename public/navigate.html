@@ -112,175 +112,179 @@
   </a-scene>
 
   <script>
-    const ARRIVAL_RADIUS = 1.5;
-    const STEP_LENGTH = 0.75;
-    const STEP_THRESHOLD = 1.8;
-    const STEP_COOLDOWN = 600;
-    const bufferSize = 15;
+  const ARRIVAL_RADIUS = 1.5;
+  const STEP_LENGTH = 0.75;
+  const STEP_THRESHOLD = 1.8;
+  const STEP_COOLDOWN = 600;
+  const bufferSize = 15;
 
-    const arrow3d = document.getElementById("arrow3d");
-    const progressPrompt = document.getElementById("progressPrompt");
-    const arrivalPrompt = document.getElementById("arrivalPrompt");
-    const destinationPrompt = document.getElementById("destinationPrompt");
-    const video = document.getElementById("cameraFeed");
+  const arrow3d = document.getElementById("arrow3d");
+  const progressPrompt = document.getElementById("progressPrompt");
+  const arrivalPrompt = document.getElementById("arrivalPrompt");
+  const destinationPrompt = document.getElementById("destinationPrompt");
+  const video = document.getElementById("cameraFeed");
 
-    // --- Coordinate setup ---
-    function normalize(str) { return str?.trim(); }
-
-    const maps = {
-      MainCampus: {
-        EngineeringHall: {
-          Room101: { x: 10, y: 5 },
-          Room102: { x: 12, y: 5 },
-          Room201: { x: 10, y: 10 },
-          Room202: { x: 12, y: 10 },
-          Lobby: { x: 5, y: 2 },
-          Entrance: { x: 0, y: 0 }
-        },
-        Library: {
-          Room301: { x: 8, y: 3 },
-          Room302: { x: 9, y: 6 },
-          Entrance: { x: 0, y: 0 }
-        }
-      },
-      ArmstrongCampus: {
-        ScienceCenter: {
-          Room401: { x: 15, y: 10 },
-          Room402: { x: 17, y: 12 },
-          Entrance: { x: 0, y: 0 }
-        }
-      }
-    };
-
-    const params = new URLSearchParams(window.location.search);
-    const campus = normalize(params.get("campus"));
-    const building = normalize(params.get("building"));
-    const startRoom = normalize(params.get("start"));
-    const destRoom = normalize(params.get("dest"));
-
-    const buildingMap = maps?.[campus]?.[building];
-    const startCoords = buildingMap?.[startRoom];
-    const destCoords = buildingMap?.[destRoom];
-    const destinationName = destRoom?.toUpperCase();
-
-    if (!startCoords || !destCoords) {
-      alert("Invalid campus, building, or room selection.");
-    } else {
-      destinationPrompt.textContent = `Destination: ${destinationName}`;
-    }
-
-    // --- Motion and heading setup ---
-    let accelBuffer = [];
-    let lastStepTime = 0;
-    let deviceHeading = 0; // live compass heading
-    let userPosition = { ...startCoords };
-    let currentArrowRotation = 0;
-
-    async function initCamera() {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:"environment" } });
-        video.srcObject = stream;
-      } catch(e){ alert("Camera access failed: "+e.message); }
-    }
-
-    async function enableMotion() {
-      const overlay = document.getElementById("motionOverlay");
-      const scene = document.getElementById("sceneRoot");
-
-      try {
-        if (typeof DeviceOrientationEvent.requestPermission === "function") {
-          const permission = await DeviceOrientationEvent.requestPermission();
-          if (permission === "granted") { startMotionTracking(); }
-          else { alert("Motion permission denied."); return; }
-        }
-      } catch(e) { alert("Motion permission error: "+e); return; }
-
-      overlay.style.display = "none";
-      scene.setAttribute("visible", "true");
-      await initCamera();
-      startMotionTracking();
-    }
-
-    function startMotionTracking() {
-      window.addEventListener("devicemotion", handleMotion);
-      window.addEventListener("deviceorientation", handleOrientation);
-      requestAnimationFrame(updateArrow);
-    }
-
-    function handleOrientation(e) {
-      if (e.webkitCompassHeading !== undefined) {
-        deviceHeading = e.webkitCompassHeading;
-      } else if (e.absolute === true && e.alpha !== null) {
-        deviceHeading = 360 - e.alpha;
-      } else if (e.alpha !== null) {
-        deviceHeading = 360 - e.alpha;
+  // --- map setup ---
+  function normalize(str) { return str?.trim(); }
+  const maps = {
+    MainCampus: {
+      EngineeringHall: {
+        Room101: { x: 10, y: 5 },
+        Room102: { x: 12, y: 5 },
+        Room201: { x: 10, y: 10 },
+        Room202: { x: 12, y: 10 },
+        Lobby: { x: 5, y: 2 },
+        Entrance: { x: 0, y: 0 }
       }
     }
+  };
 
-    function handleMotion(e) {
-      const acc = e.accelerationIncludingGravity;
-      if (!acc) return;
+  const params = new URLSearchParams(window.location.search);
+  const campus = normalize(params.get("campus"));
+  const building = normalize(params.get("building"));
+  const startRoom = normalize(params.get("start"));
+  const destRoom = normalize(params.get("dest"));
 
-      const magnitude = Math.sqrt(acc.x ** 2 + acc.y ** 2 + acc.z ** 2);
-      accelBuffer.push(magnitude);
-      if (accelBuffer.length > bufferSize) accelBuffer.shift();
+  const buildingMap = maps?.[campus]?.[building];
+  const startCoords = buildingMap?.[startRoom];
+  const destCoords = buildingMap?.[destRoom];
+  const destinationName = destRoom?.toUpperCase?.() ?? "Unknown";
 
-      const avg = accelBuffer.reduce((a, b) => a + b, 0) / accelBuffer.length;
-      const now = Date.now();
-      const baseline = accelBuffer.slice(0, bufferSize - 3).reduce((a, b) => a + b, 0) / (bufferSize - 3);
+  if (!startCoords || !destCoords) {
+    alert("Invalid campus, building, or room selection.");
+  } else {
+    destinationPrompt.textContent = `Destination: ${destinationName}`;
+  }
 
-      if ((avg - baseline) > 0.5 && avg > STEP_THRESHOLD && now - lastStepTime > STEP_COOLDOWN) {
-        lastStepTime = now;
-        takeStep();
+  // --- motion variables ---
+  let accelBuffer = [];
+  let lastStepTime = 0;
+  let deviceHeading = 0;
+  let userPosition = { ...startCoords };
+  let currentArrowRotation = 0;
+
+  // --- camera ---
+  async function initCamera() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+      video.srcObject = stream;
+    } catch (e) {
+      alert("Camera access failed: " + e.message);
+    }
+  }
+
+  // --- motion enable handler ---
+  async function enableMotion() {
+    const overlay = document.getElementById("motionOverlay");
+    const scene = document.getElementById("sceneRoot");
+
+    try {
+      if (typeof DeviceOrientationEvent !== "undefined" &&
+          typeof DeviceOrientationEvent.requestPermission === "function") {
+        const response = await DeviceOrientationEvent.requestPermission();
+        if (response !== "granted") {
+          alert("Motion permission denied. Enable in Safari Settings > Motion & Orientation Access.");
+          return;
+        }
       }
+    } catch (e) {
+      console.warn("Motion permission error:", e);
     }
 
-    // --- Movement logic ---
-    function takeStep() {
-      // Compute bearing to destination
-      const dx = destCoords.x - userPosition.x;
-      const dy = destCoords.y - userPosition.y;
-      const bearingToDest = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
+    overlay.style.display = "none";
+    scene.setAttribute("visible", "true");
+    await initCamera();
+    startMotionTracking();
+  }
 
-      // Determine alignment between device heading and target
-      const diff = ((bearingToDest - deviceHeading + 540) % 360) - 180;
-      const moveFactor = Math.cos(diff * Math.PI / 180);
+  // --- start listeners ---
+  function startMotionTracking() {
+    window.addEventListener("devicemotion", handleMotion);
+    window.addEventListener("deviceorientation", handleOrientation);
+    window.addEventListener("deviceorientationabsolute", handleOrientation); // extra fallback
+    requestAnimationFrame(updateArrow);
+  }
 
-      // Move user along current heading, scaled by alignment
-      const rad = deviceHeading * Math.PI / 180;
-      userPosition.x += Math.cos(rad) * STEP_LENGTH * moveFactor;
-      userPosition.y += Math.sin(rad) * STEP_LENGTH * moveFactor;
+  // --- orientation handler with live debug ---
+  function handleOrientation(e) {
+    let heading;
+
+    if (e.webkitCompassHeading !== undefined) {
+      heading = e.webkitCompassHeading; // iOS true north
+    } else if (e.absolute && e.alpha !== null) {
+      heading = 360 - e.alpha;
+    } else if (e.alpha !== null) {
+      heading = 360 - e.alpha;
     }
 
-    // --- Arrow rotation + feedback ---
-    function updateArrow() {
-      const dx = destCoords.x - userPosition.x;
-      const dy = destCoords.y - userPosition.y;
-      const distance = Math.hypot(dx, dy);
-      const bearingToDest = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
-
-      const relativeBearing = ((bearingToDest - deviceHeading) + 360) % 360;
-      const smoothingFactor = 0.08;
-      const diff = ((relativeBearing - currentArrowRotation + 540) % 360) - 180;
-      currentArrowRotation += diff * smoothingFactor;
-
-      arrow3d.object3D.rotation.y = THREE.MathUtils.degToRad(currentArrowRotation);
-
-      // Brightness feedback when facing correct direction
-      const alignment = Math.cos(diff * Math.PI / 180);
-      const emissiveIntensity = 0.2 + Math.max(0, alignment) * 1.0; // 0.2–1.2 range
-      arrow3d.setAttribute("material", `color: red; emissive: red; emissiveIntensity: ${emissiveIntensity.toFixed(2)}`);
-
-      // Update proximity
-      let proximity = "Far";
-      if (distance < 2) proximity = "Close";
-      else if (distance < 5) proximity = "Near";
-
-      progressPrompt.textContent = `${proximity} (${distance.toFixed(1)}m)`;
-      arrivalPrompt.style.display = (distance < ARRIVAL_RADIUS) ? "block" : "none";
-
-      requestAnimationFrame(updateArrow);
+    if (heading !== undefined) {
+      deviceHeading = heading % 360;
     }
-  </script>
+
+    // debug output (so you can see heading values)
+    destinationPrompt.textContent =
+      `Dest: ${destinationName} | α:${e.alpha?.toFixed?.(1) ?? "?"} | ` +
+      `Compass:${e.webkitCompassHeading?.toFixed?.(1) ?? "?"} | ` +
+      `Heading:${deviceHeading.toFixed(1)}`;
+  }
+
+  // --- motion handler (detect steps) ---
+  function handleMotion(e) {
+    const acc = e.accelerationIncludingGravity;
+    if (!acc) return;
+
+    const magnitude = Math.sqrt(acc.x ** 2 + acc.y ** 2 + acc.z ** 2);
+    accelBuffer.push(magnitude);
+    if (accelBuffer.length > bufferSize) accelBuffer.shift();
+
+    const avg = accelBuffer.reduce((a, b) => a + b, 0) / accelBuffer.length;
+    const now = Date.now();
+    const baseline = accelBuffer.slice(0, bufferSize - 3).reduce((a, b) => a + b, 0) / (bufferSize - 3);
+
+    if ((avg - baseline) > 0.5 && avg > STEP_THRESHOLD && now - lastStepTime > STEP_COOLDOWN) {
+      lastStepTime = now;
+      takeStep();
+    }
+  }
+
+  // --- step handler ---
+  function takeStep() {
+    const dx = destCoords.x - userPosition.x;
+    const dy = destCoords.y - userPosition.y;
+    const bearingToDest = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
+
+    const diff = ((bearingToDest - deviceHeading + 540) % 360) - 180;
+    const rad = deviceHeading * Math.PI / 180;
+    const moveFactor = Math.cos(diff * Math.PI / 180);
+
+    userPosition.x += Math.cos(rad) * STEP_LENGTH * moveFactor;
+    userPosition.y += Math.sin(rad) * STEP_LENGTH * moveFactor;
+  }
+
+  // --- update loop ---
+  function updateArrow() {
+    const dx = destCoords.x - userPosition.x;
+    const dy = destCoords.y - userPosition.y;
+    const distance = Math.hypot(dx, dy);
+
+    const bearingToDest = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
+    const relativeBearing = ((bearingToDest - deviceHeading) + 360) % 360;
+
+    const smoothingFactor = 0.08;
+    const diff = ((relativeBearing - currentArrowRotation + 540) % 360) - 180;
+    currentArrowRotation += diff * smoothingFactor;
+
+    arrow3d.object3D.rotation.y = THREE.MathUtils.degToRad(currentArrowRotation);
+
+    let proximity = "Far";
+    if (distance < 2) proximity = "Close";
+    else if (distance < 5) proximity = "Near";
+
+    progressPrompt.textContent = `${proximity} (${distance.toFixed(1)}m)`;
+    arrivalPrompt.style.display = (distance < ARRIVAL_RADIUS) ? "block" : "none";
+
+    requestAnimationFrame(updateArrow);
+  }
+</script>
 </body>
 </html>
