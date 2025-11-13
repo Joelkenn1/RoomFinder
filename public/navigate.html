@@ -282,25 +282,27 @@
       const dy = destCoords.y - userPosition.y;
       const distance = Math.hypot(dx, dy);
 
-      // 1. Camera info
+      // 1. Place arrow a fixed distance in front of the camera
+      const ARROW_DISTANCE = 1.5;
+      const cameraWorldPos = new THREE.Vector3();
       const cameraObj = document.getElementById("camera").object3D;
       const arrowObj = arrow3d.object3D;
-
-      const cameraWorldPos = new THREE.Vector3();
       cameraObj.getWorldPosition(cameraWorldPos);
-
+      
       const cameraDir = new THREE.Vector3();
       cameraObj.getWorldDirection(cameraDir);
-
-      // 2. Place arrow in front of camera
-      const ARROW_DISTANCE = 1.5;
+      
+      // Arrow position in front of camera
       arrowObj.position.copy(cameraWorldPos).add(cameraDir.multiplyScalar(ARROW_DISTANCE));
-
-      // 3. Compute arrow rotation towards destination
-      const destPos = new THREE.Vector3(destCoords.x, 0, destCoords.y);
-      const arrowToDest = new THREE.Vector3().subVectors(destPos, arrowObj.position);
-      const angleY = Math.atan2(arrowToDest.x, arrowToDest.z); // rotation around Y
-
+      arrowObj.position.y = cameraWorldPos.y - 0.2; // slight downward offset so cone is visible
+      
+      // 2. Compute vector to destination relative to user
+      const destVector = new THREE.Vector3(destCoords.x - userPosition.x, 0, destCoords.y - userPosition.y);
+      
+      // 3. Compute angle for Y rotation
+      const angleY = Math.atan2(destVector.x, destVector.z);
+      
+      // 4. Rotate arrow
       arrowObj.rotation.set(0, angleY, 0);
 
       // 4. UI update
