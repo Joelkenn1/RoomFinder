@@ -121,12 +121,10 @@
            device-orientation-permission-ui="enabled: false">
     
     <a-entity id="camera" camera look-controls="touchEnabled: false" magicWindowTrackingEnabled: true">
-      <a-entity id="arrow3d"
-        geometry="primitive: cone; radiusBottom: 0.15; height: 0.5"
-        material="color: red"
-        lock-to-camera
-        <!-- animation="property: position; dir: alternate; dur: 1000; easing: easeInOutSine; to: 0 -0.25 -1.5; loop: true" -->
-        >
+      <a-entity id="arrow3d" position="0 -0.3 -1.5">
+         <a-entity id="arrowVisual" geometry="primitive: cone; ..." material="color:red"
+            animation="property: position; to: 0 -0.25 0; dir: alternate; dur: 1200; loop: true">
+        </a-entity>
       </a-entity>
     </a-entity>
   </a-scene>
@@ -300,17 +298,17 @@
     }
 
     /* ----------------- Lock Arrow to Camera ----------------- */
-    AFRAME.registerComponent('lock-to-camera', {
-      tick: function () {
-        const camera = this.el.sceneEl.camera.el.object3D;
-        const arrow = this.el.object3D;
-        arrow.position.copy(camera.position);
-        // const forward = new THREE.Vector3(0, -0.3, -1.5);
-        // forward.applyQuaternion(camera.quaternion);
-        // arrow.position.add(forward);
-        arrow.rotation.copy(camera.rotation);
-      }
-    });
+    // AFRAME.registerComponent('lock-to-camera', {
+    //   tick: function () {
+    //     const camera = this.el.sceneEl.camera.el.object3D;
+    //     const arrow = this.el.object3D;
+    //     arrow.position.copy(camera.position);
+    //     // const forward = new THREE.Vector3(0, -0.3, -1.5);
+    //     // forward.applyQuaternion(camera.quaternion);
+    //     // arrow.position.add(forward);
+    //     arrow.rotation.copy(camera.rotation);
+    //   }
+    // });
   </script>
 </body>
 </html>
