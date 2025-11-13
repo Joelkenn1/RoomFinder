@@ -286,6 +286,14 @@
       currentArrowRotation += diff * smoothingFactor;
 
       arrow3d.object3D.rotation.set(0, THREE.MathUtils.degToRad(currentArrowRotation), 0);
+      
+      AFRAME.registerComponent('lock-to-camera', {
+      tick: function () {
+        const camera = this.el.sceneEl.camera.el.object3D;
+        const arrow = this.el.object3D;
+        arrow.rotation.copy(currentArrowRotation);
+      }
+    });
 
       let proximity = "Far";
       if (distance < 2) proximity = "Close";
@@ -298,13 +306,13 @@
     }
 
     /* ----------------- Lock Arrow to Camera ----------------- */
-    AFRAME.registerComponent('lock-to-camera', {
-      tick: function () {
-        const camera = this.el.sceneEl.camera.el.object3D;
-        const arrow = this.el.object3D;
-        arrow.rotation.copy(camera.rotation);
-      }
-    });
+    // AFRAME.registerComponent('lock-to-camera', {
+    //   tick: function () {
+    //     const camera = this.el.sceneEl.camera.el.object3D;
+    //     const arrow = this.el.object3D;
+    //     arrow.rotation.copy(camera.rotation);
+    //   }
+    // });
   </script>
 </body>
 </html>
