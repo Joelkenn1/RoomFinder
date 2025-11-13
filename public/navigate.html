@@ -124,8 +124,7 @@
       <a-entity id="arrow3d"
         geometry="primitive: cone; radiusBottom: 0.15; height: 0.5"
         material="color: red"
-        animation="property: position; dir: alternate; loop: true"
-        lock-to-camera>
+        animation="property: position; dir: alternate; dur: 1000; easing: easeInOutSine; to: 0 -0.25 -1.5; loop: true">
       </a-entity>
     </a-entity>
   </a-scene>
@@ -310,7 +309,6 @@
         arrow.rotation.copy(camera.rotation);
       }
     });
-
   </script>
 </body>
 </html>
