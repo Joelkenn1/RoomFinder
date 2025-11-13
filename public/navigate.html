@@ -4,65 +4,104 @@
   <title>AR Room Finder</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-
   <style>
     html, body {
       margin: 0; padding: 0;
-      overflow: hidden; width: 100%; height: 100%;
-      background-color: black; font-family: sans-serif;
+      overflow: hidden;
+      height: 100%; width: 100%;
+      background-color: black;
+      font-family: sans-serif;
     }
+
     video#cameraFeed {
-      position: fixed; top:0; left:0;
-      width:100vw; height:100vh;
-      object-fit: cover; z-index:0;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      object-fit: cover;
+      z-index: 0;
     }
+
     a-scene {
-      position: fixed; top:0; left:0;
-      width:100vw; height:100vh; z-index:1;
-      pointer-events:none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      z-index: 1;
+      pointer-events: none;
     }
-    #destinationPrompt, #progressPrompt, #arrivalPrompt, #stopGoPrompt {
-      position: absolute; left:50%; transform: translateX(-50%);
-      background: rgba(0,0,0,0.6); color:white;
-      padding:8px 16px; border-radius:6px; z-index:5;
-      text-align:center;
+
+    #destinationPrompt, #progressPrompt, #arrivalPrompt, #stopGo {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.6);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 6px;
+      z-index: 5;
+      text-align: center;
     }
-    #destinationPrompt { top:3%; font-size:1.25rem; }
-    #progressPrompt { top:18%; font-size:1.1rem; }
-    #arrivalPrompt { bottom:10%; font-size:1.2rem; display:none; }
-    #stopGoPrompt {
-      top:40%; font-size:2rem; font-weight:bold;
-      padding: 1rem 2rem; border:2px solid white;
-      display:none;
+
+    #destinationPrompt { top: 3%; font-size: 1.25rem; }
+    #progressPrompt { top: 18%; font-size: 1.1rem; }
+    #arrivalPrompt {
+      display: none;
+      bottom: 10%;
+      font-size: 1.2rem;
     }
+    #stopGo {
+      top: 50%;
+      transform: translate(-50%, -50%);
+      font-weight: bold;
+      padding: 12px 24px;
+      border: 2px solid white;
+      font-size: 2rem;
+      display: none;
+      z-index: 6;
+      border-radius: 8px;
+    }
+
     #motionOverlay {
-      position: fixed; top:0; left:0;
-      width:100vw; height:100vh;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
       background: rgba(0,0,0,0.85);
-      display:flex; align-items:center; justify-content:center;
-      z-index:10;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
     }
+
     #motionButton {
-      font-size:2rem; padding:1rem 2rem;
-      background-color: rgba(0,0,0,0.5); color:white;
-      border:2px solid white; border-radius:8px; cursor:pointer;
+      font-size: 2rem;
+      padding: 1rem 2rem;
+      background-color: rgba(0,0,0,0.5);
+      color: white;
+      border: 2px solid white;
+      border-radius: 8px;
+      cursor: pointer;
     }
+
     .stepButton {
-      position: fixed; bottom:25%;
-      font-size:1rem; padding:0.5rem 1rem;
-      border-radius:6px; border:none; color:white; cursor:pointer;
-      z-index:5;
+      position: absolute;
+      bottom: 20%;
+      padding: 12px 24px;
+      font-size: 1.25rem;
+      border-radius: 8px;
+      border: 2px solid white;
+      background-color: rgba(0,0,0,0.5);
+      color: white;
+      cursor: pointer;
+      z-index: 5;
     }
-    #simulateStepsBtn { left:15%; background-color:blue; }
-    #simulateNextBtn { right:15%; background-color:green; }
-    #findRoomBtn { display:none; bottom:15%; left:50%; transform:translateX(-50%);
-      background-color:purple; padding:0.5rem 1rem; font-size:1rem; border-radius:6px;
-      color:white; cursor:pointer; z-index:5;
-    }
+
+    #simulateSteps { left: 10%; }
+    #simulateNext { right: 10%; }
+    #findAnother { display: none; bottom: 10%; left: 50%; transform: translateX(-50%); }
   </style>
 </head>
 <body>
   <video id="cameraFeed" autoplay playsinline></video>
+
   <div id="motionOverlay">
     <button id="motionButton" onclick="enableMotion()">Enable Motion</button>
   </div>
@@ -70,203 +109,213 @@
   <div id="destinationPrompt">Destination: Loading...</div>
   <div id="progressPrompt">Loading navigation...</div>
   <div id="arrivalPrompt">You've arrived!</div>
-  <div id="stopGoPrompt">STOP</div>
+  <div id="stopGo"></div>
 
-  <button id="simulateStepsBtn" class="stepButton" disabled>Simulate Steps</button>
-  <button id="simulateNextBtn" class="stepButton" disabled>Simulate Next Steps</button>
-  <button id="findRoomBtn">Find Another Room</button>
+  <button id="simulateSteps" class="stepButton">Simulate Steps</button>
+  <button id="simulateNext" class="stepButton">Simulate Next Steps</button>
+  <button id="findAnother" class="stepButton">Find Another Room</button>
 
   <a-scene id="sceneRoot"
-           embedded visible="false"
-           renderer="antialias:true; alpha:true;"
-           vr-mode-ui="enabled:false"
-           xr-mode-ui="enabled:false"
-           loading-screen="enabled:false"
-           device-orientation-permission-ui="enabled:false">
-    <a-entity id="camera" camera look-controls="touchEnabled:false">
+           embedded
+           visible="false"
+           renderer="antialias: true; alpha: true;"
+           vr-mode-ui="enabled: false"
+           xr-mode-ui="enabled: false"
+           loading-screen="enabled: false"
+           device-orientation-permission-ui="enabled: false">
+    <a-entity id="camera" camera look-controls="touchEnabled: false">
       <a-entity id="arrow3d"
-                geometry="primitive: cone; radiusBottom:0.15; height:0.5"
-                material="color:red"
-                position="0 -0.3 -1.5">
+        geometry="primitive: cone; radiusBottom: 0.15; height: 0.5"
+        material="color: red"
+        position="0 -0.3 -1.5">
       </a-entity>
+      <a-entity id="stepsContainer"></a-entity>
     </a-entity>
   </a-scene>
 
 <script>
-  // ==========================
-  // CONFIG
-  // ==========================
-  const ARRIVAL_RADIUS = 1.5;
-  const MOVE_SPEED = 0.5; // step fraction
-  const BOB_SPEED = 2.0;
-  const BOB_AMPLITUDE = 0.05;
-  const APPROACH_TOLERANCE = 10 * Math.PI/180; // ±10° tolerance
-  const STEP_DURATION = 5000; // ms
-  const STEP_SPACING = 0.5; // spacing between flat circles
+const arrow3d = document.getElementById("arrow3d");
+const stepsContainer = document.getElementById("stepsContainer");
+const progressPrompt = document.getElementById("progressPrompt");
+const arrivalPrompt = document.getElementById("arrivalPrompt");
+const destinationPrompt = document.getElementById("destinationPrompt");
+const stopGo = document.getElementById("stopGo");
+const simulateSteps = document.getElementById("simulateSteps");
+const simulateNext = document.getElementById("simulateNext");
+const findAnother = document.getElementById("findAnother");
+const video = document.getElementById("cameraFeed");
 
-  // ==========================
-  // DOM
-  // ==========================
-  const arrow3d = document.getElementById("arrow3d");
-  const progressPrompt = document.getElementById("progressPrompt");
-  const arrivalPrompt = document.getElementById("arrivalPrompt");
-  const stopGoPrompt = document.getElementById("stopGoPrompt");
-  const destinationPrompt = document.getElementById("destinationPrompt");
-  const video = document.getElementById("cameraFeed");
+// ==========================
+// Location Data
+// ==========================
+function normalize(str){ return str?.trim(); }
 
-  const simulateStepsBtn = document.getElementById("simulateStepsBtn");
-  const simulateNextBtn = document.getElementById("simulateNextBtn");
-  const findRoomBtn = document.getElementById("findRoomBtn");
-
-  // ==========================
-  // LOCATION DATA
-  // ==========================
-  function normalize(str){ return str?.trim(); }
-  const maps = {
-    MainCampus:{EngineeringHall:{
-      Room101:{x:10,y:5},Room102:{x:12,y:5},Room201:{x:10,y:10},Room202:{x:12,y:10},Lobby:{x:5,y:2},Entrance:{x:0,y:0}
-    },Library:{
-      Room301:{x:8,y:3},Room302:{x:9,y:6},Entrance:{x:0,y:0}
-    }},
-    ArmstrongCampus:{ScienceCenter:{
-      Room401:{x:15,y:10},Room402:{x:17,y:12},Entrance:{x:0,y:0}
-    }}
-  };
-
-  const params = new URLSearchParams(window.location.search);
-  const campus = normalize(params.get("campus"));
-  const building = normalize(params.get("building"));
-  const startRoom = normalize(params.get("start"));
-  const destRoom = normalize(params.get("dest"));
-
-  const buildingMap = maps[campus]?.[building];
-  const startCoords = buildingMap?.[startRoom];
-  const destCoords = buildingMap?.[destRoom];
-
-  const destinationName = destRoom.toUpperCase();
-  if(!startCoords || !destCoords){ alert("Invalid campus, building, or room selection."); }
-  else { destinationPrompt.textContent = "Destination: " + destinationName; }
-
-  // ==========================
-  // CAMERA INIT
-  // ==========================
-  async function initCamera(){
-    try{ const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}}); video.srcObject=stream;}
-    catch(err){ alert("Camera access failed: "+err.message);}
-  }
-
-  async function enableMotion(){
-    const overlay=document.getElementById("motionOverlay");
-    const scene=document.getElementById("sceneRoot");
-    try{
-      if(typeof DeviceOrientationEvent?.requestPermission==="function"){
-        const perm = await DeviceOrientationEvent.requestPermission();
-        if(perm!=="granted"){ alert("Motion permission denied."); return; }
-      }
-    }catch(e){ alert("Motion permission error: "+e); return; }
-
-    overlay.style.display="none"; scene.setAttribute("visible","true");
-    await initCamera();
-    startTracking();
-  }
-
-  // ==========================
-  // STATE
-  // ==========================
-  let navigationReady = !!(startCoords && destCoords);
-  let currentPos = {x:startCoords.x,y:startCoords.y};
-  let remainingDistance = Math.hypot(destCoords.x-startCoords.x,destCoords.y-startCoords.y);
-  let time=0;
-  let stepsFraction = Math.max(1, Math.floor(remainingDistance/1.5)); // farther distance = more fractions
-  let currentStep = 0;
-
-  // ==========================
-  // UTILS
-  // ==========================
-  function createFootprint(x,z){
-    const footprint = document.createElement("a-circle");
-    footprint.setAttribute("position",`${x} -0.01 ${z}`);
-    footprint.setAttribute("radius","0.1");
-    footprint.setAttribute("color","red");
-    footprint.setAttribute("rotation","-90 0 0");
-    document.querySelector("a-scene").appendChild(footprint);
-    setTimeout(()=>{ footprint.remove(); }, STEP_DURATION);
-  }
-
-  function startTracking(){
-    requestAnimationFrame(updateArrow);
-  }
-
-  function updateArrow(){
-    time+=0.016;
-    if(!navigationReady){ requestAnimationFrame(updateArrow); return; }
-
-    const dx = destCoords.x-currentPos.x;
-    const dy = destCoords.y-currentPos.y;
-    const distance = Math.hypot(dx,dy);
-    const targetAngle = Math.atan2(dy,dx);
-    arrow3d.object3D.rotation.set(0,-targetAngle,0);
-
-    // Enable buttons only when arrow points toward destination
-    const arrowForwardAngle = 0; // camera forward
-    const angleDiff = ((targetAngle-arrowForwardAngle+Math.PI)%(2*Math.PI))-Math.PI;
-    const enableButtons = Math.abs(angleDiff)<=APPROACH_TOLERANCE && currentStep<stepsFraction;
-    simulateStepsBtn.disabled=!enableButtons;
-    simulateNextBtn.disabled=!enableButtons;
-
-    const bobY = -0.3 + Math.sin(time*BOB_SPEED)*BOB_AMPLITUDE;
-    arrow3d.setAttribute("position",`0 ${bobY.toFixed(2)} -1.5`);
-
-    if(distance<=ARRIVAL_RADIUS){
-      arrivalPrompt.style.display="block";
-      progressPrompt.textContent="Arrived at "+destinationName;
-      simulateStepsBtn.disabled=true;
-      simulateNextBtn.disabled=true;
-      findRoomBtn.style.display="block";
-    } else {
-      let proximity="Far";
-      if(distance<2) proximity="Close"; else if(distance<5) proximity="Near";
-      progressPrompt.textContent=`${proximity} (${distance.toFixed(1)}m)`;
+const maps = {
+  MainCampus: {
+    EngineeringHall: {
+      Room101: { x: 10, y: 5 },
+      Room102: { x: 12, y: 5 },
+      Room201: { x: 10, y: 10 },
+      Room202: { x: 12, y: 10 },
+      Lobby: { x: 5, y: 2 },
+      Entrance: { x: 0, y: 0 }
+    },
+    Library: {
+      Room301: { x: 8, y: 3 },
+      Room302: { x: 9, y: 6 },
+      Entrance: { x: 0, y: 0 }
     }
-
-    requestAnimationFrame(updateArrow);
+  },
+  ArmstrongCampus: {
+    ScienceCenter: {
+      Room401: { x: 15, y: 10 },
+      Room402: { x: 17, y: 12 },
+      Entrance: { x: 0, y: 0 }
+    }
   }
+};
 
-  // ==========================
-  // STEP BUTTONS
-  // ==========================
-  simulateStepsBtn.onclick=()=>{ 
-    stopGoPrompt.style.display="block"; stopGoPrompt.textContent="STOP"; stopGoPrompt.style.backgroundColor="red";
-    setTimeout(()=>{
-      // Generate footprints for fraction distance
-      const fractionDist = remainingDistance/stepsFraction;
-      for(let i=1;i<=5;i++){
-        createFootprint(0, -i*fractionDist/5);
-      }
-      stopGoPrompt.textContent="GO"; stopGoPrompt.style.backgroundColor="green";
-    }, 1000);
-  };
+const params = new URLSearchParams(window.location.search);
+const campus = normalize(params.get("campus"));
+const building = normalize(params.get("building"));
+const startRoom = normalize(params.get("start"));
+const destRoom = normalize(params.get("dest"));
 
-  simulateNextBtn.onclick=()=>{
-    currentStep++; 
-    remainingDistance -= remainingDistance/stepsFraction; // update distance
-    stopGoPrompt.style.display="block"; stopGoPrompt.textContent="STOP"; stopGoPrompt.style.backgroundColor="red";
-    setTimeout(()=>{
-      const fractionDist = remainingDistance/stepsFraction;
-      for(let i=1;i<=5;i++){
-        createFootprint(0, -i*fractionDist/5);
-      }
-      stopGoPrompt.textContent="GO"; stopGoPrompt.style.backgroundColor="green";
+const buildingMap = maps[campus]?.[building];
+const startCoords = buildingMap?.[startRoom];
+const destCoords = buildingMap?.[destRoom];
 
-      if(currentStep>=stepsFraction){
-        simulateStepsBtn.disabled=true;
-        simulateNextBtn.disabled=true;
-        findRoomBtn.style.display="block";
-      }
-    }, 1000);
-  };
+const destinationName = destRoom?.toUpperCase() ?? "Unknown";
+destinationPrompt.textContent = "Destination: " + destinationName;
 
-  findRoomBtn.onclick=()=>{ window.location.href="Select.html"; };
+// ==========================
+// Camera init
+// ==========================
+async function initCamera() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}});
+    video.srcObject = stream;
+  } catch(err){ alert("Camera access failed: " + err.message);}
+}
+
+async function enableMotion() {
+  const overlay = document.getElementById("motionOverlay");
+  const scene = document.getElementById("sceneRoot");
+  try {
+    if(typeof DeviceOrientationEvent?.requestPermission === "function"){
+      const perm = await DeviceOrientationEvent.requestPermission();
+      if(perm !== "granted"){ alert("Motion permission denied."); return; }
+    }
+  } catch(e){ alert("Motion permission error: "+e); return; }
+
+  overlay.style.display="none";
+  scene.setAttribute("visible","true");
+  await initCamera();
+  startTracking();
+}
+
+// ==========================
+// Tracking
+// ==========================
+let userHeading = 0;
+let time = 0;
+let currentPos = {...startCoords};
+let totalDistance = Math.hypot(destCoords.x - startCoords.x, destCoords.y - startCoords.y);
+let fractions = [];
+let fractionIndex = 0;
+let stepsVisible = false;
+
+function startTracking(){
+  window.addEventListener("deviceorientation", e=>{
+    if(e.alpha!==null) userHeading = e.alpha*(Math.PI/180);
+  });
+  requestAnimationFrame(updateArrow);
+}
+
+// ==========================
+// Utilities
+// ==========================
+function computeAngleToDest(){
+  const dx = destCoords.x - currentPos.x;
+  const dy = destCoords.y - currentPos.y;
+  return Math.atan2(dy, dx);
+}
+
+function createStepCircle(x,z){
+  const circle = document.createElement("a-circle");
+  circle.setAttribute("color","red");
+  circle.setAttribute("radius","0.1");
+  circle.setAttribute("rotation","-90 0 0");
+  circle.setAttribute("position",`${x.toFixed(2)} 0 ${z.toFixed(2)}`);
+  stepsContainer.appendChild(circle);
+}
+
+// ==========================
+// Arrow & Buttons
+// ==========================
+simulateSteps.disabled = false;
+simulateNext.disabled = false;
+
+simulateSteps.addEventListener("click", ()=>{
+  if(!isArrowPointing()) return;
+  displayStopGo("STOP", "red");
+  showStepAnimation();
+});
+
+simulateNext.addEventListener("click", ()=>{
+  if(!isArrowPointing()) return;
+  updateDistance();
+  displayStopGo("STOP", "red");
+  showStepAnimation();
+});
+
+findAnother.addEventListener("click", ()=>{ window.location.href="Select.html"; });
+
+// Check if arrow points within ~15 degrees of destination
+function isArrowPointing(){
+  const arrowAngle = userHeading;
+  const targetAngle = computeAngleToDest();
+  const diff = Math.abs(arrowAngle - targetAngle);
+  return diff < Math.PI/12;
+}
+
+function displayStopGo(msg, color){
+  stopGo.textContent = msg;
+  stopGo.style.backgroundColor=color;
+  stopGo.style.display="block";
+  setTimeout(()=>{ stopGo.textContent="GO"; stopGo.style.backgroundColor="green"; }, 5000);
+}
+
+// Show step animation
+function showStepAnimation(){
+  stepsVisible=true;
+  const dx = destCoords.x - currentPos.x;
+  const dy = destCoords.y - currentPos.y;
+  const stepCount = Math.max(3, Math.floor(Math.hypot(dx,dy)/2));
+  const stepFractionX = dx/stepCount;
+  const stepFractionY = dy/stepCount;
+  for(let i=0;i<stepCount;i++){
+    createStepCircle(stepFractionX*(i+1), -stepFractionY*(i+1));
+  }
+  setTimeout(()=>{ stepsVisible=false; if(fractionIndex>=fractions.length-1){simulateSteps.disabled=true; simulateNext.disabled=true; findAnother.style.display="block";}},5000);
+}
+
+function updateDistance(){
+  const dx = destCoords.x - currentPos.x;
+  const dy = destCoords.y - currentPos.y;
+  currentPos.x += dx/3;
+  currentPos.y += dy/3;
+}
+
+// ==========================
+// Update Loop
+// ==========================
+function updateArrow(){
+  time+=0.016;
+  const angle = computeAngleToDest();
+  arrow3d.object3D.rotation.set(0,-angle,0);
+  requestAnimationFrame(updateArrow);
+}
 </script>
 </body>
 </html>
