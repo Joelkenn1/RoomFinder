@@ -188,9 +188,10 @@
       const scene = document.getElementById("sceneRoot");
 
       try {
-        if (typeof DeviceOrientationEvent?.requestPermission === "function") {
+        if (typeof DeviceOrientationEvent.requestPermission === "function") {
           const permission = await DeviceOrientationEvent.requestPermission();
-          if (permission !== "granted") { alert("Motion permission denied."); return; }
+          if (permission === "granted") { startMotionTracking(); }
+          else { alert("Motion permission denied."); return; }
         }
       } catch(e) { alert("Motion permission error: "+e); return; }
 
