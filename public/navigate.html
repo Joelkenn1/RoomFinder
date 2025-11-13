@@ -103,7 +103,7 @@
       <a-entity id="arrowVisual"
           geometry="primitive: cone; radiusBottom: 0.15; height: 0.5"
           material="color:red"
-          rotation="-90 0 0"
+          rotation="-105 0 0"
           animation="property: position; to: 0 -0.25 0; dir: alternate; dur: 1200; loop: true">
       </a-entity>
     </a-entity>
@@ -265,8 +265,12 @@
         // 2. Place arrow in front of camera
         const forward = new THREE.Vector3(0, 0, -1);
         forward.applyQuaternion(camera.quaternion);
-        arrow.position.copy(camPos).add(forward.multiplyScalar(1.5));
-        arrow.position.y = camPos.y - 0.2;
+
+        const ARROW_DISTANCE = 2.0; // move it farther away
+        const ARROW_HEIGHT_OFFSET = -0.4; // slightly lower
+        arrow.position.copy(cameraWorldPos)
+                         .add(cameraDir.multiplyScalar(ARROW_DISTANCE));
+        arrow.position.y += ARROW_HEIGHT_OFFSET; 
 
         // 3. Direction vector to destination
         const destVec = new THREE.Vector3(destCoords.x - userPosition.x, 0, destCoords.y - userPosition.y);
