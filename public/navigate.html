@@ -1,4 +1,3 @@
-<!DOCTYPE html>
 <html>
 <head>
   <title>AR Room Finder</title>
@@ -113,9 +112,9 @@
   <script>
     /* ----------------- Constants ----------------- */
     const ARRIVAL_RADIUS = 1.5;
-    const STEP_LENGTH = 1.2;
-    const STEP_THRESHOLD = 1.8;
-    const STEP_COOLDOWN = 600;
+    const STEP_LENGTH = 0.75;      // realistic indoor step
+    const STEP_THRESHOLD = 1.2;    // easier to detect steps
+    const STEP_COOLDOWN = 350;     // faster cadence
     const bufferSize = 15;
 
     /* ----------------- Elements ----------------- */
@@ -139,9 +138,7 @@
           "1204(Computer-Lab)": { x: -48.75, y: 22.5 },
           "1208(Advisement-Center)": { x: -75, y: 22.5 }, 
           "1217(IT-Services)": { x: -82.5, y: 29.25 }
-          
         },
-      
       },
       ArmstrongCampus: {
         ScienceCenter: {
@@ -240,17 +237,12 @@
       }
     }
 
+    /* ----------------- Step Movement ----------------- */
     function takeStep() {
-      const dx = destCoords.x - userPosition.x;
-      const dy = destCoords.y - userPosition.y;
-      const bearingToDest = (Math.atan2(dy, dx) * 180/Math.PI + 360)%360;
-      const diff = ((bearingToDest-deviceHeading+540)%360)-180;
-      const moveFactor = Math.cos(diff*Math.PI/180) * 1.8;
-      const rad = deviceHeading*Math.PI/180;
-
-      userPosition.x += Math.cos(rad)*STEP_LENGTH*moveFactor;
-      userPosition.y += Math.sin(rad)*STEP_LENGTH*moveFactor;
-
+      // Move in heading direction
+      const rad = deviceHeading * Math.PI / 180;
+      userPosition.x += Math.sin(rad) * STEP_LENGTH;
+      userPosition.y += Math.cos(rad) * STEP_LENGTH;
     }
 
     /* ----------------- Arrow Component ----------------- */
@@ -267,20 +259,22 @@
         const forward = new THREE.Vector3(0, 0, -1);
         forward.applyQuaternion(camera.quaternion);
 
-        const ARROW_DISTANCE = 2.0; // move it farther away
-        const ARROW_HEIGHT_OFFSET = -0.4; // slightly lower
+        const ARROW_DISTANCE = 2.0;
+        const ARROW_HEIGHT_OFFSET = -0.4;
         arrow.position.copy(camPos)
-                         .add(forward.multiplyScalar(ARROW_DISTANCE));
-        arrow.position.y += ARROW_HEIGHT_OFFSET; 
+                     .add(forward.multiplyScalar(ARROW_DISTANCE));
+        arrow.position.y += ARROW_HEIGHT_OFFSET;
 
         // 3. Direction vector to destination
         const destVec = new THREE.Vector3(destCoords.x - userPosition.x, 0, destCoords.y - userPosition.y);
 
-        // 4. Compute Y rotation angle toward destination
-        const angleY = Math.atan2(destVec.x, destVec.z);
+        // 4. Compute rotation relative to camera
+        const camYaw = camera.rotation.y;
+        const worldAngle = Math.atan2(destVec.x, destVec.z);
+        const relativeAngle = worldAngle - camYaw;
 
         // 5. Apply rotation
-        arrow.rotation.set(0, angleY, 0);
+        arrow.rotation.set(0, relativeAngle, 0);
 
         // 6. Update UI
         const distance = destVec.length();
