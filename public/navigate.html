@@ -245,11 +245,11 @@
       const dy = destCoords.y - userPosition.y;
       const bearingToDest = (Math.atan2(dy, dx) * 180/Math.PI + 360)%360;
       const diff = ((bearingToDest-deviceHeading+540)%360)-180;
-      const moveFactor = Math.cos(diff*Math.PI/180) * 2;
+      const moveFactor = Math.cos(diff*Math.PI/180) * 3;
       const rad = deviceHeading*Math.PI/180;
 
-      userPosition.x += Math.sin(rad)*STEP_LENGTH * moveFactor;
-      userPosition.y += Math.cos(rad)*STEP_LENGTH * moveFactor;
+      userPosition.x += Math.cos(rad)*STEP_LENGTH * moveFactor;
+      userPosition.y += Math.sin(rad)*STEP_LENGTH * moveFactor;
 
     }
 
