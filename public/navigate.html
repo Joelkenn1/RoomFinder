@@ -128,25 +128,25 @@
     /* ----------------- Maps ----------------- */
     const maps = {
       MainCampus: {
-        EngineeringHall: {
-          Room101: { x: 10, y: 5 },
-          Room102: { x: 12, y: 5 },
-          Room201: { x: 10, y: 10 },
-          Room202: { x: 12, y: 10 },
-          Lobby: { x: 5, y: 2 },
-          Entrance: { x: 0, y: 0 }
+        ITBuilding: {
+          "Entrance": { x: 0, y: 0 },
+          "1005": { x: -22.5, y: 31.5 },
+          "1004": { x: -15, y: 31.5 },
+          "1305/1303": { x: 27.75, y: 32.25 },
+          "1101": { x: 30, y: 15 },
+          "1104": { x: 27.75, y: 14.25 },
+          "1110": { x: 27.75, y: 6.75 },
+          "1204(Computer-Lab)": { x: 48.75, y: 22.5 },
+          "1208(Advisement-Center)": { x: 75, y: 22.5 }, 
+          "1217(IT-Services)": { x: 82.5, y: 29.25 }
         },
-        Library: {
-          Room301: { x: 8, y: 3 },
-          Room302: { x: 9, y: 6 },
-          Entrance: { x: 0, y: 0 }
-        }
+      
       },
       ArmstrongCampus: {
         ScienceCenter: {
-          Room401: { x: 15, y: 10 },
-          Room402: { x: 17, y: 12 },
-          Entrance: { x: 0, y: 0 }
+          "2330": { x: 15, y: 10 },
+          "1051": { x: 17, y: 12 },
+          "Entrance": { x: 0, y: 0 }
         }
       }
     };
@@ -157,8 +157,8 @@
     const params = new URLSearchParams(window.location.search);
     const campus = normalize(params.get("campus"));
     const building = normalize(params.get("building"));
-    const startRoom = normalize(params.get("start"));
-    const destRoom = normalize(params.get("dest"));
+    const startRoom = params.get("start");
+    const destRoom = params.get("dest");
 
     const buildingMap = maps?.[campus]?.[building];
     const startCoords = buildingMap?.[startRoom];
