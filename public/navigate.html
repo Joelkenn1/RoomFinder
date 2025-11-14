@@ -112,7 +112,7 @@
     const ARRIVAL_RADIUS = 1.5;
     const STEP_LENGTH = 1.2;
     const STEP_THRESHOLD = 1.8;
-    const STEP_COOLDOWN = 600;
+    const STEP_COOLDOWN = 180;
     const bufferSize = 15;
 
     const arrow3d = document.getElementById("arrow3d");
@@ -268,7 +268,7 @@
         arrow.position.y += ARROW_HEIGHT_OFFSET;
 
         const arrowVec = new THREE.Vector3(
-          destCoords.x - userPosition.x * 0.25,
+          destCoords.x - userPosition.x * 0.6,
           0,
           destCoords.y - userPosition.y
         );
