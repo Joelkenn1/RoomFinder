@@ -98,7 +98,7 @@
     <!-- Camera -->
     <a-entity id="camera" camera look-controls="touchEnabled: false" magicWindowTrackingEnabled="true"></a-entity>
 
-    <!-- Arrow -->
+    <!-- Arrow in the scene -->
     <a-entity id="arrow3d" arrow-lock>
       <a-entity id="arrowVisual"
           geometry="primitive: cone; radiusBottom: 0.15; height: 0.5"
@@ -152,6 +152,7 @@
 
     /* ----------------- URL Params ----------------- */
     function normalize(str) { return str?.trim(); }
+
     const params = new URLSearchParams(window.location.search);
     const campus = normalize(params.get("campus"));
     const building = normalize(params.get("building"));
@@ -175,7 +176,7 @@
     let deviceHeading = 0;
     let userPosition = { ...startCoords };
 
-    // ===== ADDED FOR INITIAL ORIENTATION FIX =====
+    // ===== ADDED: correction quaternion so app assumes "facing forward" at navigation start
     let worldCorrection = null;
 
     /* ----------------- Motion Access ----------------- */
@@ -201,14 +202,17 @@
       scene.setAttribute("visible", "true");
       await initCamera();
 
-      // ===== ADDED FOR INITIAL ORIENTATION FIX =====
-      const cam = document.getElementById("camera").object3D;
-      const forward = new THREE.Vector3(0, 0, -1)
-                          .applyQuaternion(cam.quaternion)
-                          .normalize();
-
-      const assumedForward = new THREE.Vector3(0, 0, -1);
-      worldCorrection = new THREE.Quaternion().setFromUnitVectors(forward, assumedForward);
+      // ===== ADDED: compute worldCorrection once so app treats current camera forward as "forward"
+      try {
+        const camObj = document.getElementById("camera").object3D;
+        const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camObj.quaternion).normalize();
+        const assumedForward = new THREE.Vector3(0, 0, -1);
+        worldCorrection = new THREE.Quaternion().setFromUnitVectors(forward, assumedForward);
+      } catch (err) {
+        // If anything goes wrong, just leave worldCorrection null (app still works)
+        console.warn('worldCorrection setup failed:', err);
+        worldCorrection = null;
+      }
 
       startMotionTracking();
     }
@@ -250,22 +254,22 @@
       }
     }
 
+    /* ----------------- Movement: CAMERA-BASED (Option A) ----------------- */
     function takeStep() {
-      const dx = destCoords.x - userPosition.x;
-      const dy = destCoords.y - userPosition.y;
+      // Use the camera's forward vector for movement so steps follow where the user is facing.
+      const cam = document.getElementById("camera").object3D;
+      const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.quaternion);
 
-      // ===== APPLY CORRECTION HERE =====
-      let dirVec = new THREE.Vector3(dx, 0, dy);
-      if (worldCorrection) dirVec.applyQuaternion(worldCorrection);
+      // Apply the same correction used for arrow orientation so "forward" matches the assumed forward.
+      if (worldCorrection) forward.applyQuaternion(worldCorrection);
 
-      const bearingToDest = (Math.atan2(dirVec.z, dirVec.x) * 180/Math.PI + 360)%360;
+      // Keep movement flat on X/Z plane
+      forward.y = 0;
+      forward.normalize();
 
-      const diff = ((bearingToDest-deviceHeading+540)%360)-180;
-      const moveFactor = Math.cos(diff*Math.PI/180) * 1.8;
-      const rad = deviceHeading*Math.PI/180;
-
-      userPosition.x += Math.cos(rad)*STEP_LENGTH*moveFactor;
-      userPosition.y += Math.sin(rad)*STEP_LENGTH*moveFactor;
+      // Move user position: forward.x -> map x, forward.z -> map y
+      userPosition.x += forward.x * STEP_LENGTH;
+      userPosition.y += forward.z * STEP_LENGTH;
     }
 
     /* ----------------- Arrow Component ----------------- */
@@ -274,33 +278,34 @@
         const camera = this.el.sceneEl.camera.el.object3D;
         const arrow = this.el.object3D;
 
-        // Camera position
+        // 1. Camera position
         const camPos = new THREE.Vector3();
         camera.getWorldPosition(camPos);
 
-        // Place arrow in front of camera
+        // 2. Place arrow in front of camera
         const forward = new THREE.Vector3(0, 0, -1);
         forward.applyQuaternion(camera.quaternion);
 
-        const ARROW_DISTANCE = 2.0;
-        const ARROW_HEIGHT_OFFSET = -0.4;
-
+        const ARROW_DISTANCE = 2.0; // move it farther away
+        const ARROW_HEIGHT_OFFSET = -0.4; // slightly lower
         arrow.position.copy(camPos)
-                       .add(forward.multiplyScalar(ARROW_DISTANCE));
-        arrow.position.y += ARROW_HEIGHT_OFFSET;
+                         .add(forward.multiplyScalar(ARROW_DISTANCE));
+        arrow.position.y += ARROW_HEIGHT_OFFSET; 
 
-        // Destination vector
+        // 3. Direction vector to destination (map coords)
         let destVec = new THREE.Vector3(destCoords.x - userPosition.x, 0, destCoords.y - userPosition.y);
 
-        // ===== APPLY CORRECTION HERE =====
+        // 4. Apply initial-orientation correction so arrow assumes user started facing forward
         if (worldCorrection) destVec.applyQuaternion(worldCorrection);
 
+        // 5. Compute Y rotation angle toward destination (local)
         const angleY = Math.atan2(destVec.x, destVec.z);
 
+        // 6. Apply rotation
         arrow.rotation.set(0, angleY, 0);
 
-        // UI updates
-        const distance = destVec.length();
+        // 7. Update UI
+        const distance = Math.hypot(destVec.x, destVec.z);
         let proximity = "Far";
         if(distance<2) proximity="Close";
         else if(distance<5) proximity="Near";
