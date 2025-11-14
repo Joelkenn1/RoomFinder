@@ -224,35 +224,42 @@
       tick: function () {
         const camera = this.el.sceneEl.camera.el.object3D;
         const arrow = this.el.object3D;
-
+    
+        // Camera position
         const camPos = new THREE.Vector3();
         camera.getWorldPosition(camPos);
-
+    
+        // Place arrow in front of camera
         const forward = new THREE.Vector3(0, 0, -1);
         forward.applyQuaternion(camera.quaternion);
-
         const ARROW_DISTANCE = 2.0;
         const ARROW_HEIGHT_OFFSET = -0.4;
-        arrow.position.copy(camPos).add(forward.multiplyScalar(ARROW_DISTANCE));
+        arrow.position.copy(camPos).add(forward.clone().multiplyScalar(ARROW_DISTANCE));
         arrow.position.y += ARROW_HEIGHT_OFFSET;
-
+    
+        // Vector to destination
         const destVec = new THREE.Vector3(
           (destCoords.x + (destCoords.xOffset||0)) - userPosition.x,
           0,
           (destCoords.y + (destCoords.yOffset||0)) - userPosition.y
         );
-
+    
+        // Arrow rotation toward destination
         const angleY = Math.atan2(destVec.x, destVec.z);
         arrow.rotation.set(0, angleY, 0);
-
-        let distance = destVec.length();
-        if(userPosition._distanceChange !== undefined) distance += userPosition._distanceChange;
-
+    
+        // Compute forward direction of arrow in world XZ plane
+        const arrowDir = new THREE.Vector3(0, 0, -1).applyEuler(arrow.rotation).normalize();
+    
+        // Project dest vector onto arrow forward direction
+        const distanceAlongArrow = destVec.dot(arrowDir);
+    
         let proximity = "Far";
-        if(distance < 2) proximity="Close";
-        else if(distance < 5) proximity="Near";
-        progressPrompt.textContent = `${proximity} (${distance.toFixed(1)}m)`;
-        arrivalPrompt.style.display = (distance < ARRIVAL_RADIUS) ? "block" : "none";
+        const displayDistance = Math.max(0, distanceAlongArrow); // prevent negative display
+        if(displayDistance < 2) proximity="Close";
+        else if(displayDistance < 5) proximity="Near";
+        progressPrompt.textContent = `${proximity} (${displayDistance.toFixed(1)}m)`;
+        arrivalPrompt.style.display = (displayDistance < ARRIVAL_RADIUS) ? "block" : "none";
       }
     });
 
