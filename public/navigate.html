@@ -277,10 +277,10 @@
         const destVec = new THREE.Vector3(destCoords.x - userPosition.x, 0, destCoords.y - userPosition.y);
 
         // 4. Compute Y rotation angle toward destination
-        const angleY = Math.atan2(destVec.z, destVec.x);
+        const angleY = Math.atan2(destVec.x, destVec.z);
 
         // 5. Apply rotation
-        arrow.rotation.set(0, angleY, 0);
+        arrow.rotation.set(0, -angleY, 0);
 
         // 6. Update UI
         const distance = destVec.length();
