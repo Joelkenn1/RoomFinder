@@ -3,9 +3,7 @@
 <head>
   <title>AR Room Finder</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-
   <style>
     html, body { margin:0; padding:0; overflow:hidden; height:100%; width:100%; background:black; font-family:sans-serif; }
     video#cameraFeed { position:fixed; top:0; left:0; width:100vw; height:100vh; object-fit:cover; z-index:0; }
@@ -23,33 +21,18 @@
   <video id="cameraFeed" autoplay playsinline></video>
 
   <div id="motionOverlay">
-    <button id="motionButton" onclick="enableMotion()">Enable Motion</button>
+    <button id="motionButton" onclick="enableMotion()">Enable Motion (face forward at entrance)</button>
   </div>
 
   <div id="destinationPrompt">Destination: Loading...</div>
   <div id="progressPrompt">Loading navigation...</div>
   <div id="arrivalPrompt">You've arrived!</div>
 
-  <a-scene id="sceneRoot"
-           embedded
-           visible="false"
-           renderer="antialias: true; alpha: true"
-           vr-mode-ui="enabled: false"
-           xr-mode-ui="enabled: false"
-           loading-screen="enabled: false"
-           device-orientation-permission-ui="enabled: false">
-
+  <a-scene id="sceneRoot" embedded visible="false" renderer="antialias: true; alpha: true" vr-mode-ui="enabled: false" xr-mode-ui="enabled: false" loading-screen="enabled: false" device-orientation-permission-ui="enabled: false">
     <a-entity id="camera" camera look-controls="touchEnabled: false" magicWindowTrackingEnabled="true"></a-entity>
-
     <a-entity id="arrow3d" arrow-lock>
-      <a-entity id="arrowVisual"
-          geometry="primitive: cone; radiusBottom: 0.15; height: 0.5"
-          material="color:red"
-          rotation="-105 0 0"
-          animation="property: position; to: 0 -0.25 0; dir: alternate; dur: 1200; loop: true">
-      </a-entity>
+      <a-entity id="arrowVisual" geometry="primitive: cone; radiusBottom: 0.15; height: 0.5" material="color:red" rotation="-105 0 0" animation="property: position; to: 0 -0.25 0; dir: alternate; dur: 1200; loop: true"></a-entity>
     </a-entity>
-
   </a-scene>
 
   <script>
@@ -76,7 +59,7 @@
           "1104": { x: 27.75, y: 14.25 },
           "1110": { x: 27.75, y: 6.75 },
           "1204(Computer-Lab)": { x: 48.75, y: 22.5 },
-          "1208(Advisement-Center)": { x: 75, y: 22.5 }, 
+          "1208(Advisement-Center)": { x: 75, y: 22.5 },
           "1217(IT-Services)": { x: 79.5, y: 35 }
         }
       },
@@ -109,13 +92,13 @@
       destinationPrompt.textContent = `Destination: ${destinationName}`;
     }
 
-    // normalize coordinates relative to entrance
     const startRel = { x: startCoords.x - entranceCoords.x, y: startCoords.y - entranceCoords.y };
-    const destRel = { x: destCoords.x - entranceCoords.x, y: destCoords.y - entranceCoords.y };
+    const destRel  = { x: destCoords.x  - entranceCoords.x, y: destCoords.y  - entranceCoords.y };
 
     let accelBuffer = [];
     let lastStepTime = 0;
     let deviceHeading = 0;
+    let mapNorthOffset = 0; // calibration offset
     let userPosition = { ...startRel };
 
     async function initCamera() {
@@ -139,6 +122,10 @@
       overlay.style.display = "none";
       scene.setAttribute("visible", "true");
       await initCamera();
+
+      // calibrate map north assuming user is facing building-forward at the entrance
+      mapNorthOffset = deviceHeading || 0;
+
       startMotionTracking();
     }
 
@@ -177,6 +164,10 @@
       }
     }
 
+    function correctedHeading() {
+      return ( (deviceHeading - mapNorthOffset + 360) % 360 );
+    }
+
     function takeStep() {
       const moveVec = new THREE.Vector3(
         destRel.x - userPosition.x,
@@ -185,26 +176,17 @@
       );
 
       const bearingToDest = (Math.atan2(moveVec.z, moveVec.x) * 180 / Math.PI + 360) % 360;
-      const diff = ((bearingToDest - deviceHeading + 540) % 360) - 180;
+      const diff = ((bearingToDest - correctedHeading() + 540) % 360) - 180;
       const moveFactor = Math.cos(diff * Math.PI/180);
 
-      const stepVec = moveVec.clone().normalize().multiplyScalar(STEP_LENGTH * Math.abs(moveFactor));
+      const stepVec = moveVec.clone().normalize().multiplyScalar(STEP_LENGTH * Math.abs(moveFactor || 0));
 
       userPosition.x += stepVec.x;
       userPosition.y += stepVec.z;
-      
-      // const moveFactor = Math.cos(diff*Math.PI/180) * 1.8;
-
-      // if (moveFactor > 0) {
-      //   const stepVec = moveVec.clone().normalize().multiplyScalar(STEP_LENGTH * moveFactor);
-      //   userPosition.x += stepVec.x;
-      //   userPosition.y += stepVec.z;
-      // }
     }
 
     AFRAME.registerComponent('arrow-lock', {
       tick: function() {
-
         const camera = this.el.sceneEl.camera.el.object3D;
         const arrow = this.el.object3D;
 
@@ -226,8 +208,11 @@
           destRel.y - userPosition.y
         );
 
-        const angleY = Math.atan2(arrowVec.x, arrowVec.z);
-        arrow.rotation.set(0, -angleY, 0);
+        const arrowAngleRad = Math.atan2(arrowVec.x, arrowVec.z);
+        const arrowAngleDeg = arrowAngleRad * 180 / Math.PI;
+
+        const finalAngleDeg = arrowAngleDeg - correctedHeading();
+        arrow.rotation.set(0, -THREE.MathUtils.degToRad(finalAngleDeg), 0);
 
         const distance = arrowVec.length();
 
