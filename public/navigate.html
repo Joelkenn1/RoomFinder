@@ -113,7 +113,7 @@
   <script>
     /* ----------------- Constants ----------------- */
     const ARRIVAL_RADIUS = 1.5;
-    const STEP_LENGTH = 0.75;
+    const STEP_LENGTH = 1.2;
     const STEP_THRESHOLD = 1.8;
     const STEP_COOLDOWN = 600;
     const bufferSize = 15;
@@ -139,17 +139,6 @@
           "1204(Computer-Lab)": { x: -48.75, y: 22.5 },
           "1208(Advisement-Center)": { x: -75, y: 22.5 }, 
           "1217(IT-Services)": { x: -82.5, y: 29.25 }
-          
-          // "Entrance": { x: 0, y: 0 },
-          // "1005": { x: -22.5, y: 31.5 },
-          // "1004": { x: -15, y: 31.5 },
-          // "1305/1303": { x: 27.75, y: 32.25 },
-          // "1101": { x: 30, y: 15 },
-          // "1104": { x: 27.75, y: 14.25 },
-          // "1110": { x: 27.75, y: 6.75 },
-          // "1204(Computer-Lab)": { x: 48.75, y: 22.5 },
-          // "1208(Advisement-Center)": { x: 75, y: 22.5 }, 
-          // "1217(IT-Services)": { x: 82.5, y: 29.25 }
           
         },
       
@@ -256,14 +245,12 @@
       const dy = destCoords.y - userPosition.y;
       const bearingToDest = (Math.atan2(dy, dx) * 180/Math.PI + 360)%360;
       const diff = ((bearingToDest-deviceHeading+540)%360)-180;
-      const moveFactor = Math.cos(diff*Math.PI/180);
+      const moveFactor = Math.cos(diff*Math.PI/180) * 1.8;
       const rad = deviceHeading*Math.PI/180;
 
-      // userPosition.x += Math.cos(rad)*STEP_LENGTH*moveFactor;
-      // userPosition.y += Math.sin(rad)*STEP_LENGTH*moveFactor;
+      userPosition.x += Math.cos(rad)*STEP_LENGTH*moveFactor;
+      userPosition.y += Math.sin(rad)*STEP_LENGTH*moveFactor;
 
-      userPosition.x += Math.sin(rad) * STEP_LENGTH;
-      userPosition.y += Math.cos(rad) * STEP_LENGTH;
     }
 
     /* ----------------- Arrow Component ----------------- */
