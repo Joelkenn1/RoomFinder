@@ -7,71 +7,15 @@
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 
   <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-      height: 100%;
-      width: 100%;
-      background-color: black;
-      font-family: sans-serif;
-    }
-
-    video#cameraFeed {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      object-fit: cover;
-      z-index: 0;
-    }
-
-    a-scene {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      z-index: 1;
-      pointer-events: none;
-    }
-
-    #motionOverlay {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100vw; height: 100vh;
-      background: rgba(0,0,0,0.85);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 10;
-    }
-
-    #motionButton {
-      font-size: 2rem;
-      padding: 1rem 2rem;
-      background-color: rgba(0,0,0,0.5);
-      color: white;
-      border: 2px solid white;
-      border-radius: 8px;
-      cursor: pointer;
-    }
-
-    #destinationPrompt, #progressPrompt, #arrivalPrompt {
-      position: absolute;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(0,0,0,0.6);
-      color: white;
-      padding: 8px 16px;
-      border-radius: 6px;
-      z-index: 5;
-    }
-
-    #destinationPrompt { top: 3%; font-size: 1.3rem; }
-    #progressPrompt { top: 18%; font-size: 1.1rem; }
-    #arrivalPrompt { display: none; bottom: 10%; font-size: 1.2rem; background: rgba(0,0,0,0.7); padding: 10px 20px; border-radius: 8px; }
+    html, body { margin:0; padding:0; overflow:hidden; height:100%; width:100%; background:black; font-family:sans-serif; }
+    video#cameraFeed { position:fixed; top:0; left:0; width:100vw; height:100vh; object-fit:cover; z-index:0; }
+    a-scene { position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:1; pointer-events:none; }
+    #motionOverlay { position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); display:flex; align-items:center; justify-content:center; z-index:10; }
+    #motionButton { font-size:2rem; padding:1rem 2rem; background:rgba(0,0,0,0.5); color:white; border:2px solid white; border-radius:8px; cursor:pointer; }
+    #destinationPrompt, #progressPrompt, #arrivalPrompt { position:absolute; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.6); color:white; padding:8px 16px; border-radius:6px; z-index:5; }
+    #destinationPrompt { top:3%; font-size:1.3rem; }
+    #progressPrompt { top:18%; font-size:1.1rem; }
+    #arrivalPrompt { display:none; bottom:10%; font-size:1.2rem; background:rgba(0,0,0,0.7); padding:10px 20px; border-radius:8px; }
   </style>
 </head>
 
@@ -132,7 +76,7 @@
           "1104": { x: 27.75, y: 14.25 },
           "1110": { x: 27.75, y: 6.75 },
           "1204(Computer-Lab)": { x: 48.75, y: 22.5 },
-          "1208(Advisement-Center)": { x: 75, y: 14 }, 
+          "1208(Advisement-Center)": { x: 75, y: 22.5 }, 
           "1217(IT-Services)": { x: 82.5, y: 29.25 }
         }
       },
@@ -154,20 +98,25 @@
     const destRoom = params.get("dest");
 
     const buildingMap = maps?.[campus]?.[building];
+    const entranceCoords = buildingMap?.["Entrance"];
     const startCoords = buildingMap?.[startRoom];
     const destCoords = buildingMap?.[destRoom];
     const destinationName = destRoom?.toUpperCase?.() || "Unknown";
 
-    if (!startCoords || !destCoords) {
+    if (!startCoords || !destCoords || !entranceCoords) {
       alert("Invalid campus, building, or room selection.");
     } else {
       destinationPrompt.textContent = `Destination: ${destinationName}`;
     }
 
+    // normalize coordinates relative to entrance
+    const startRel = { x: startCoords.x - entranceCoords.x, y: startCoords.y - entranceCoords.y };
+    const destRel = { x: destCoords.x - entranceCoords.x, y: destCoords.y - entranceCoords.y };
+
     let accelBuffer = [];
     let lastStepTime = 0;
     let deviceHeading = 0;
-    let userPosition = { ...startCoords };
+    let userPosition = { ...startRel };
 
     async function initCamera() {
       try {
@@ -229,22 +178,18 @@
     }
 
     function takeStep() {
-
       const moveVec = new THREE.Vector3(
-        destCoords.x - userPosition.x,
+        destRel.x - userPosition.x,
         0,
-        destCoords.y - userPosition.y
+        destRel.y - userPosition.y
       );
 
       const bearingToDest = (Math.atan2(moveVec.z, moveVec.x) * 180 / Math.PI + 360) % 360;
       const diff = ((bearingToDest - deviceHeading + 540) % 360) - 180;
-
-      // const moveFactor = Math.max(0.8,  Math.cos(diff));
       const moveFactor = Math.cos(diff*Math.PI/180) * 1.8;
 
       if (moveFactor > 0) {
         const stepVec = moveVec.clone().normalize().multiplyScalar(STEP_LENGTH * moveFactor);
-
         userPosition.x += stepVec.x;
         userPosition.y += stepVec.z;
       }
@@ -269,21 +214,15 @@
         arrow.position.y += ARROW_HEIGHT_OFFSET;
 
         const arrowVec = new THREE.Vector3(
-          destCoords.x - userPosition.x,
+          destRel.x - userPosition.x,
           0,
-          destCoords.y - userPosition.y
+          destRel.y - userPosition.y
         );
 
         const angleY = Math.atan2(arrowVec.x, arrowVec.z);
         arrow.rotation.set(0, -angleY, 0);
 
-        const trueVec = new THREE.Vector3(
-          destCoords.x - userPosition.x,
-          0,
-          destCoords.y - userPosition.y
-        );
-
-        const distance = trueVec.length();
+        const distance = arrowVec.length();
 
         let proximity = "Far";
         if (distance < 2) proximity = "Close";
