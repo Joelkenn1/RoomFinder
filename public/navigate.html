@@ -98,7 +98,7 @@
     <!-- Camera -->
     <a-entity id="camera" camera look-controls="touchEnabled: false" magicWindowTrackingEnabled="true"></a-entity>
 
-    <!-- Arrow in the scene -->
+    <!-- Arrow -->
     <a-entity id="arrow3d" arrow-lock>
       <a-entity id="arrowVisual"
           geometry="primitive: cone; radiusBottom: 0.15; height: 0.5"
@@ -139,9 +139,7 @@
           "1204(Computer-Lab)": { x: -48.75, y: 22.5 },
           "1208(Advisement-Center)": { x: -75, y: 22.5 }, 
           "1217(IT-Services)": { x: -82.5, y: 29.25 }
-          
         },
-      
       },
       ArmstrongCampus: {
         ScienceCenter: {
@@ -154,7 +152,6 @@
 
     /* ----------------- URL Params ----------------- */
     function normalize(str) { return str?.trim(); }
-
     const params = new URLSearchParams(window.location.search);
     const campus = normalize(params.get("campus"));
     const building = normalize(params.get("building"));
@@ -178,6 +175,9 @@
     let deviceHeading = 0;
     let userPosition = { ...startCoords };
 
+    // ===== ADDED FOR INITIAL ORIENTATION FIX =====
+    let worldCorrection = null;
+
     /* ----------------- Motion Access ----------------- */
     async function initCamera(){
        try {
@@ -200,6 +200,16 @@
       overlay.style.display = "none";
       scene.setAttribute("visible", "true");
       await initCamera();
+
+      // ===== ADDED FOR INITIAL ORIENTATION FIX =====
+      const cam = document.getElementById("camera").object3D;
+      const forward = new THREE.Vector3(0, 0, -1)
+                          .applyQuaternion(cam.quaternion)
+                          .normalize();
+
+      const assumedForward = new THREE.Vector3(0, 0, -1);
+      worldCorrection = new THREE.Quaternion().setFromUnitVectors(forward, assumedForward);
+
       startMotionTracking();
     }
 
@@ -243,14 +253,19 @@
     function takeStep() {
       const dx = destCoords.x - userPosition.x;
       const dy = destCoords.y - userPosition.y;
-      const bearingToDest = (Math.atan2(dy, dx) * 180/Math.PI + 360)%360;
+
+      // ===== APPLY CORRECTION HERE =====
+      let dirVec = new THREE.Vector3(dx, 0, dy);
+      if (worldCorrection) dirVec.applyQuaternion(worldCorrection);
+
+      const bearingToDest = (Math.atan2(dirVec.z, dirVec.x) * 180/Math.PI + 360)%360;
+
       const diff = ((bearingToDest-deviceHeading+540)%360)-180;
       const moveFactor = Math.cos(diff*Math.PI/180) * 1.8;
       const rad = deviceHeading*Math.PI/180;
 
       userPosition.x += Math.cos(rad)*STEP_LENGTH*moveFactor;
       userPosition.y += Math.sin(rad)*STEP_LENGTH*moveFactor;
-
     }
 
     /* ----------------- Arrow Component ----------------- */
@@ -259,30 +274,32 @@
         const camera = this.el.sceneEl.camera.el.object3D;
         const arrow = this.el.object3D;
 
-        // 1. Camera position
+        // Camera position
         const camPos = new THREE.Vector3();
         camera.getWorldPosition(camPos);
 
-        // 2. Place arrow in front of camera
+        // Place arrow in front of camera
         const forward = new THREE.Vector3(0, 0, -1);
         forward.applyQuaternion(camera.quaternion);
 
-        const ARROW_DISTANCE = 2.0; // move it farther away
-        const ARROW_HEIGHT_OFFSET = -0.4; // slightly lower
+        const ARROW_DISTANCE = 2.0;
+        const ARROW_HEIGHT_OFFSET = -0.4;
+
         arrow.position.copy(camPos)
-                         .add(forward.multiplyScalar(ARROW_DISTANCE));
-        arrow.position.y += ARROW_HEIGHT_OFFSET; 
+                       .add(forward.multiplyScalar(ARROW_DISTANCE));
+        arrow.position.y += ARROW_HEIGHT_OFFSET;
 
-        // 3. Direction vector to destination
-        const destVec = new THREE.Vector3(destCoords.x - userPosition.x, 0, destCoords.y - userPosition.y);
+        // Destination vector
+        let destVec = new THREE.Vector3(destCoords.x - userPosition.x, 0, destCoords.y - userPosition.y);
 
-        // 4. Compute Y rotation angle toward destination
+        // ===== APPLY CORRECTION HERE =====
+        if (worldCorrection) destVec.applyQuaternion(worldCorrection);
+
         const angleY = Math.atan2(destVec.x, destVec.z);
 
-        // 5. Apply rotation
         arrow.rotation.set(0, angleY, 0);
 
-        // 6. Update UI
+        // UI updates
         const distance = destVec.length();
         let proximity = "Far";
         if(distance<2) proximity="Close";
