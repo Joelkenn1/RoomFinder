@@ -239,7 +239,7 @@
 
     /* ----------------- Step Movement ----------------- */
     function takeStep() {
-      // Move in heading direction
+      // Move in actual heading direction
       const rad = deviceHeading * Math.PI / 180;
       userPosition.x += Math.sin(rad) * STEP_LENGTH;
       userPosition.y += Math.cos(rad) * STEP_LENGTH;
@@ -265,18 +265,14 @@
                      .add(forward.multiplyScalar(ARROW_DISTANCE));
         arrow.position.y += ARROW_HEIGHT_OFFSET;
 
-        // 3. Direction vector to destination
+        // 3. Direction vector to destination (world space)
         const destVec = new THREE.Vector3(destCoords.x - userPosition.x, 0, destCoords.y - userPosition.y);
 
-        // 4. Compute rotation relative to camera
-        const camYaw = camera.rotation.y;
-        const worldAngle = Math.atan2(destVec.x, destVec.z);
-        const relativeAngle = worldAngle - camYaw;
+        // 4. Compute rotation toward destination (world-space arrow)
+        const angleY = Math.atan2(destVec.x, destVec.z);
+        arrow.rotation.set(0, angleY, 0);
 
-        // 5. Apply rotation
-        arrow.rotation.set(0, relativeAngle, 0);
-
-        // 6. Update UI
+        // 5. Update distance UI
         const distance = destVec.length();
         let proximity = "Far";
         if(distance<2) proximity="Close";
