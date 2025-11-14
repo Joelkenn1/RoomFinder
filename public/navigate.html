@@ -273,8 +273,9 @@
                          .add(forward.multiplyScalar(ARROW_DISTANCE));
         arrow.position.y += ARROW_HEIGHT_OFFSET; 
 
+        
         // 3. Direction vector to destination
-        const destVec = new THREE.Vector3(destCoords.x - userPosition.x, 0, destCoords.y - userPosition.y);
+        const destVec = new THREE.Vector3(destCoords.x - userPosition.x * 0.25, 0, destCoords.y - userPosition.y);
 
         // 4. Compute Y rotation angle toward destination
         const angleY = Math.atan2(destVec.x, destVec.z);
