@@ -7,65 +7,40 @@
 
   <style>
     html, body {
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-      height: 100%;
-      width: 100%;
-      background-color: black;
-      font-family: sans-serif;
+      margin: 0; padding: 0; overflow: hidden; height: 100%; width: 100%;
+      background-color: black; font-family: sans-serif;
     }
 
     video#cameraFeed {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      object-fit: cover;
-      z-index: 0;
+      position: fixed; top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      object-fit: cover; z-index: 0;
     }
 
     a-scene {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      z-index: 1;
+      position: fixed; top: 0; left: 0;
+      width: 100vw; height: 100vh; z-index: 1;
       pointer-events: none;
     }
 
     #motionOverlay {
-      position: fixed;
-      top: 0; left: 0;
+      position: fixed; top: 0; left: 0;
       width: 100vw; height: 100vh;
       background: rgba(0,0,0,0.85);
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      display: flex; align-items: center; justify-content: center;
       z-index: 10;
     }
 
     #motionButton {
-      font-size: 2rem;
-      padding: 1rem 2rem;
-      background-color: rgba(0,0,0,0.5);
-      color: white;
-      border: 2px solid white;
-      border-radius: 8px;
-      cursor: pointer;
+      font-size: 2rem; padding: 1rem 2rem;
+      background-color: rgba(0,0,0,0.5); color: white;
+      border: 2px solid white; border-radius: 8px; cursor: pointer;
     }
 
     #destinationPrompt, #progressPrompt, #arrivalPrompt {
-      position: absolute;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(0,0,0,0.6);
-      color: white;
-      padding: 8px 16px;
-      border-radius: 6px;
-      z-index: 5;
+      position: absolute; left: 50%; transform: translateX(-50%);
+      background: rgba(0,0,0,0.6); color: white; padding: 8px 16px;
+      border-radius: 6px; z-index: 5;
     }
 
     #destinationPrompt { top: 3%; font-size: 1.3rem; }
@@ -73,7 +48,6 @@
     #arrivalPrompt { display: none; bottom: 10%; font-size: 1.2rem; background: rgba(0,0,0,0.7); padding: 10px 20px; border-radius: 8px; }
   </style>
 </head>
-
 <body>
   <video id="cameraFeed" autoplay playsinline></video>
 
@@ -86,18 +60,15 @@
   <div id="arrivalPrompt">You've arrived!</div>
 
   <a-scene id="sceneRoot"
-           embedded
-           visible="false"
+           embedded visible="false"
            renderer="antialias: true; alpha: true"
            vr-mode-ui="enabled: false"
            xr-mode-ui="enabled: false"
            loading-screen="enabled: false"
            device-orientation-permission-ui="enabled: false">
 
-    <!-- Camera -->
     <a-entity id="camera" camera look-controls="touchEnabled: false" magicWindowTrackingEnabled="true"></a-entity>
 
-    <!-- Arrow in the scene -->
     <a-entity id="arrow3d" arrow-lock>
       <a-entity id="arrowVisual"
           geometry="primitive: cone; radiusBottom: 0.15; height: 0.5"
@@ -112,9 +83,9 @@
   <script>
     /* ----------------- Constants ----------------- */
     const ARRIVAL_RADIUS = 1.5;
-    const STEP_LENGTH = 0.75;      // realistic indoor step
-    const STEP_THRESHOLD = 1.2;    // easier to detect steps
-    const STEP_COOLDOWN = 350;     // faster cadence
+    const STEP_LENGTH = 0.75;      
+    const STEP_THRESHOLD = 1.2;    
+    const STEP_COOLDOWN = 350;     
     const bufferSize = 15;
 
     /* ----------------- Elements ----------------- */
@@ -124,34 +95,26 @@
     const destinationPrompt = document.getElementById("destinationPrompt");
     const video = document.getElementById("cameraFeed");
 
-    /* ----------------- Maps ----------------- */
+    /* ----------------- Maps with offsets for fine-tuning ----------------- */
     const maps = {
       MainCampus: {
         InformationTechnologyBuilding: {
-          "Entrance": { x: 0, y: 0 },
-          "1005": { x: 22.5, y: 31.5 },
-          "1004": { x: 15, y: 31.5 },
-          "1305/1303": { x: -27.75, y: 32.25 },
-          "1101": { x: -30, y: 15 },
-          "1104": { x: -27.75, y: 14.25 },
-          "1110": { x: -27.75, y: 6.75 },
-          "1204(Computer-Lab)": { x: -48.75, y: 22.5 },
-          "1208(Advisement-Center)": { x: -75, y: 22.5 }, 
-          "1217(IT-Services)": { x: -82.5, y: 29.25 }
-        },
-      },
-      ArmstrongCampus: {
-        ScienceCenter: {
-          "2330": { x: 15, y: 10 },
-          "1051": { x: 17, y: 12 },
-          "Entrance": { x: 0, y: 0 }
+          "Entrance": { x: 0, y: 0, xOffset: 0, yOffset: 0 },
+          "1005": { x: 22.5, y: 31.5, xOffset: 0, yOffset: 0 },
+          "1004": { x: 15, y: 31.5, xOffset: 0, yOffset: 0 },
+          "1305/1303": { x: -27.75, y: 32.25, xOffset: 0, yOffset: 0 },
+          "1101": { x: -30, y: 15, xOffset: 0, yOffset: 0 },
+          "1104": { x: -27.75, y: 14.25, xOffset: 0, yOffset: 0 },
+          "1110": { x: -27.75, y: 6.75, xOffset: 0, yOffset: 0 },
+          "1204(Computer-Lab)": { x: -48.75, y: 22.5, xOffset: 0, yOffset: 0 },
+          "1208(Advisement-Center)": { x: -75, y: 22.5, xOffset: 0, yOffset: 0 }, 
+          "1217(IT-Services)": { x: -82.5, y: 29.25, xOffset: 0, yOffset: 0 }
         }
       }
     };
 
     /* ----------------- URL Params ----------------- */
     function normalize(str) { return str?.trim(); }
-
     const params = new URLSearchParams(window.location.search);
     const campus = normalize(params.get("campus"));
     const building = normalize(params.get("building"));
@@ -177,7 +140,7 @@
 
     /* ----------------- Motion Access ----------------- */
     async function initCamera(){
-       try {
+      try {
         const stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:"environment" } });
         video.srcObject = stream;
       } catch(e){ alert("Camera access failed: "+e.message); }
@@ -186,7 +149,6 @@
     async function enableMotion(){
       const overlay = document.getElementById("motionOverlay");
       const scene = document.getElementById("sceneRoot");
-
       try {
         if (typeof DeviceOrientationEvent?.requestPermission === "function") {
           const permission = await DeviceOrientationEvent.requestPermission();
@@ -237,12 +199,24 @@
       }
     }
 
-    /* ----------------- Step Movement ----------------- */
+    /* ----------------- Step Movement with arrow-relative distance ----------------- */
     function takeStep() {
-      // Move in actual heading direction
       const rad = deviceHeading * Math.PI / 180;
-      userPosition.x += Math.sin(rad) * STEP_LENGTH;
-      userPosition.y += Math.cos(rad) * STEP_LENGTH;
+      const stepVec = { x: Math.sin(rad) * STEP_LENGTH, y: Math.cos(rad) * STEP_LENGTH };
+
+      const toDest = { x: (destCoords.x + (destCoords.xOffset||0)) - userPosition.x, 
+                       y: (destCoords.y + (destCoords.yOffset||0)) - userPosition.y };
+      const dist = Math.sqrt(toDest.x**2 + toDest.y**2);
+      if(dist === 0) return;
+
+      // normalize toDest
+      const toDestNorm = { x: toDest.x/dist, y: toDest.y/dist };
+
+      // projection determines if distance decreases/increases
+      const projection = stepVec.x * toDestNorm.x + stepVec.y * toDestNorm.y;
+      userPosition.x += stepVec.x;
+      userPosition.y += stepVec.y;
+      userPosition._distanceChange = -projection;
     }
 
     /* ----------------- Arrow Component ----------------- */
@@ -251,34 +225,34 @@
         const camera = this.el.sceneEl.camera.el.object3D;
         const arrow = this.el.object3D;
 
-        // 1. Camera position
         const camPos = new THREE.Vector3();
         camera.getWorldPosition(camPos);
 
-        // 2. Place arrow in front of camera
         const forward = new THREE.Vector3(0, 0, -1);
         forward.applyQuaternion(camera.quaternion);
 
         const ARROW_DISTANCE = 2.0;
         const ARROW_HEIGHT_OFFSET = -0.4;
-        arrow.position.copy(camPos)
-                     .add(forward.multiplyScalar(ARROW_DISTANCE));
+        arrow.position.copy(camPos).add(forward.multiplyScalar(ARROW_DISTANCE));
         arrow.position.y += ARROW_HEIGHT_OFFSET;
 
-        // 3. Direction vector to destination (world space)
-        const destVec = new THREE.Vector3(destCoords.x - userPosition.x, 0, destCoords.y - userPosition.y);
+        const destVec = new THREE.Vector3(
+          (destCoords.x + (destCoords.xOffset||0)) - userPosition.x,
+          0,
+          (destCoords.y + (destCoords.yOffset||0)) - userPosition.y
+        );
 
-        // 4. Compute rotation toward destination (world-space arrow)
         const angleY = Math.atan2(destVec.x, destVec.z);
         arrow.rotation.set(0, angleY, 0);
 
-        // 5. Update distance UI
-        const distance = destVec.length();
+        let distance = destVec.length();
+        if(userPosition._distanceChange !== undefined) distance += userPosition._distanceChange;
+
         let proximity = "Far";
-        if(distance<2) proximity="Close";
-        else if(distance<5) proximity="Near";
+        if(distance < 2) proximity="Close";
+        else if(distance < 5) proximity="Near";
         progressPrompt.textContent = `${proximity} (${distance.toFixed(1)}m)`;
-        arrivalPrompt.style.display = (distance<ARRIVAL_RADIUS) ? "block":"none";
+        arrivalPrompt.style.display = (distance < ARRIVAL_RADIUS) ? "block" : "none";
       }
     });
 
