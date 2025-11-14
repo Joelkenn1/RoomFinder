@@ -52,195 +52,179 @@
 
   </a-scene>
 
-  <script>
-    const ARRIVAL_RADIUS = 1.5;
-    const STEP_LENGTH = 1.85;
-    const STEP_THRESHOLD = 1;
-    const STEP_COOLDOWN = 275;
-    const bufferSize = 8;
+<script>
+  const ARRIVAL_RADIUS = 1.5;
+  const STEP_LENGTH = 1.85;
+  const STEP_THRESHOLD = 1;
+  const STEP_COOLDOWN = 275;
+  const bufferSize = 8;
 
-    const arrow3d = document.getElementById("arrow3d");
-    const progressPrompt = document.getElementById("progressPrompt");
-    const arrivalPrompt = document.getElementById("arrivalPrompt");
-    const destinationPrompt = document.getElementById("destinationPrompt");
-    const video = document.getElementById("cameraFeed");
+  const arrow3d = document.getElementById("arrow3d");
+  const progressPrompt = document.getElementById("progressPrompt");
+  const arrivalPrompt = document.getElementById("arrivalPrompt");
+  const destinationPrompt = document.getElementById("destinationPrompt");
+  const video = document.getElementById("cameraFeed");
 
-    const maps = {
-      MainCampus: {
-        InformationTechnologyBuilding: {
-          "Entrance": { x: 0, y: 0 },
-          "1005": { x: -22.5, y: 31.5 },
-          "1004": { x: -15, y: 31.5 },
-          "1305/1303": { x: 27.75, y: 32.25 },
-          "1101": { x: 30, y: 15 },
-          "1104": { x: 27.75, y: 14.25 },
-          "1110": { x: 27.75, y: 6.75 },
-          "1204(Computer-Lab)": { x: 48.75, y: 22.5 },
-          "1208(Advisement-Center)": { x: 75, y: 22.5 }, 
-          "1217(IT-Services)": { x: 79.5, y: 35 }
-        }
-      },
-      ArmstrongCampus: {
-        ScienceCenter: {
-          "2330": { x: 15, y: 10 },
-          "1051": { x: 17, y: 12 },
-          "Entrance": { x: 0, y: 0 }
-        }
+  const maps = {
+    MainCampus: {
+      InformationTechnologyBuilding: {
+        "Entrance": { x: 0, y: 0 },
+        "1005": { x: -22.5, y: 31.5 },
+        "1004": { x: -15, y: 31.5 },
+        "1305/1303": { x: 27.75, y: 32.25 },
+        "1101": { x: 30, y: 15 },
+        "1104": { x: 27.75, y: 14.25 },
+        "1110": { x: 27.75, y: 6.75 },
+        "1204(Computer-Lab)": { x: 48.75, y: 22.5 },
+        "1208(Advisement-Center)": { x: 75, y: 22.5 }, 
+        "1217(IT-Services)": { x: 79.5, y: 35 }
       }
-    };
-
-    function normalize(str) { return str?.trim(); }
-
-    const params = new URLSearchParams(window.location.search);
-    const campus = normalize(params.get("campus"));
-    const building = normalize(params.get("building"));
-    const startRoom = params.get("start");
-    const destRoom = params.get("dest");
-
-    const buildingMap = maps?.[campus]?.[building];
-    const entranceCoords = buildingMap?.["Entrance"];
-    const startCoords = buildingMap?.[startRoom];
-    const destCoords = buildingMap?.[destRoom];
-    const destinationName = destRoom?.toUpperCase?.() || "Unknown";
-
-    if (!startCoords || !destCoords || !entranceCoords) {
-      alert("Invalid campus, building, or room selection.");
-    } else {
-      destinationPrompt.textContent = `Destination: ${destinationName}`;
-    }
-
-    // normalize coordinates relative to entrance
-    const startRel = { x: startCoords.x - entranceCoords.x, y: startCoords.y - entranceCoords.y };
-    const destRel = { x: destCoords.x - entranceCoords.x, y: destCoords.y - entranceCoords.y };
-
-    let accelBuffer = [];
-    let lastStepTime = 0;
-    let deviceHeading = 0;
-    let userPosition = { ...startRel };
-
-    async function initCamera() {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:"environment" } });
-        video.srcObject = stream;
-      } catch(e){ alert("Camera access failed: "+e.message); }
-    }
-
-    async function enableMotion() {
-      const overlay = document.getElementById("motionOverlay");
-      const scene = document.getElementById("sceneRoot");
-
-      try {
-        if (typeof DeviceOrientationEvent?.requestPermission === "function") {
-          const permission = await DeviceOrientationEvent.requestPermission();
-          if (permission !== "granted") return;
-        }
-      } catch(e) { return; }
-
-      overlay.style.display = "none";
-      scene.setAttribute("visible", "true");
-      await initCamera();
-      startMotionTracking();
-    }
-
-    function startMotionTracking() {
-      window.addEventListener("devicemotion", handleMotion);
-      window.addEventListener("deviceorientation", handleOrientation);
-      window.addEventListener("deviceorientationabsolute", handleOrientation);
-      requestAnimationFrame(updateArrow);
-    }
-
-    function handleOrientation(e) {
-      if (e.webkitCompassHeading !== undefined) {
-        deviceHeading = e.webkitCompassHeading;
-      } else if (e.absolute && e.alpha !== null) {
-        deviceHeading = 360 - e.alpha;
-      } else if (e.alpha !== null) {
-        deviceHeading = 360 - e.alpha;
+    },
+    ArmstrongCampus: {
+      ScienceCenter: {
+        "2330": { x: 15, y: 10 },
+        "1051": { x: 17, y: 12 },
+        "Entrance": { x: 0, y: 0 }
       }
     }
+  };
 
-    function handleMotion(e) {
-      const acc = e.accelerationIncludingGravity;
-      if (!acc) return;
+  function normalize(str) { return str?.trim(); }
 
-      const magnitude = Math.sqrt(acc.x**2 + acc.y**2 + acc.z**2);
-      accelBuffer.push(magnitude);
-      if (accelBuffer.length > bufferSize) accelBuffer.shift();
+  const params = new URLSearchParams(window.location.search);
+  const campus = normalize(params.get("campus"));
+  const building = normalize(params.get("building"));
+  const startRoom = params.get("start");
+  const destRoom = params.get("dest");
 
-      const avg = accelBuffer.reduce((a,b)=>a+b,0)/accelBuffer.length;
-      const now = Date.now();
-      const baseline = accelBuffer.slice(0, bufferSize-3).reduce((a,b)=>a+b,0)/(bufferSize-3);
+  const buildingMap = maps?.[campus]?.[building];
+  const entranceCoords = buildingMap?.["Entrance"];
+  const startCoords = buildingMap?.[startRoom];
+  const destCoords = buildingMap?.[destRoom];
+  const destinationName = destRoom?.toUpperCase?.() || "Unknown";
 
-      if ((avg-baseline) > 0.5 && avg>STEP_THRESHOLD && now-lastStepTime>STEP_COOLDOWN) {
-        lastStepTime = now;
-        takeStep();
+  if (!startCoords || !destCoords || !entranceCoords) {
+    alert("Invalid campus, building, or room selection.");
+  } else {
+    destinationPrompt.textContent = `Destination: ${destinationName}`;
+  }
+
+  const startRel = { x: startCoords.x - entranceCoords.x, y: startCoords.y - entranceCoords.y };
+  const destRel = { x: destCoords.x - entranceCoords.x, y: destCoords.y - entranceCoords.y };
+
+  let accelBuffer = [];
+  let lastStepTime = 0;
+  let deviceHeading = 0;
+  let userPosition = { ...startRel };
+
+  async function initCamera() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:"environment" } });
+      video.srcObject = stream;
+    } catch(e){ alert("Camera access failed: "+e.message); }
+  }
+
+  async function enableMotion() {
+    const overlay = document.getElementById("motionOverlay");
+    const scene = document.getElementById("sceneRoot");
+
+    try {
+      if (typeof DeviceOrientationEvent?.requestPermission === "function") {
+        const permission = await DeviceOrientationEvent.requestPermission();
+        if (permission !== "granted") return;
       }
-    }
+    } catch(e) { return; }
 
-    function takeStep() {
-      const moveVec = new THREE.Vector3(
+    overlay.style.display = "none";
+    scene.setAttribute("visible", "true");
+    await initCamera();
+    startMotionTracking();
+  }
+
+  function startMotionTracking() {
+    window.addEventListener("devicemotion", handleMotion);
+    window.addEventListener("deviceorientation", handleOrientation);
+    window.addEventListener("deviceorientationabsolute", handleOrientation);
+    requestAnimationFrame(updateArrow);
+  }
+
+  function handleOrientation(e) {
+    if (e.webkitCompassHeading !== undefined) {
+      deviceHeading = e.webkitCompassHeading;
+    } else if (e.absolute && e.alpha !== null) {
+      deviceHeading = 360 - e.alpha;
+    } else if (e.alpha !== null) {
+      deviceHeading = 360 - e.alpha;
+    }
+  }
+
+  function handleMotion(e) {
+    const acc = e.accelerationIncludingGravity;
+    if (!acc) return;
+
+    const magnitude = Math.sqrt(acc.x**2 + acc.y**2 + acc.z**2);
+    accelBuffer.push(magnitude);
+    if (accelBuffer.length > bufferSize) accelBuffer.shift();
+
+    const avg = accelBuffer.reduce((a,b)=>a+b,0)/accelBuffer.length;
+    const now = Date.now();
+    const baseline = accelBuffer.slice(0, bufferSize-3).reduce((a,b)=>a+b,0)/(bufferSize-3);
+
+    if ((avg-baseline) > 0.5 && avg>STEP_THRESHOLD && now-lastStepTime>STEP_COOLDOWN) {
+      lastStepTime = now;
+      takeStep();
+    }
+  }
+
+  function takeStep() {
+    const rad = (deviceHeading * Math.PI) / 180;
+
+    const dx = Math.sin(rad) * STEP_LENGTH;
+    const dy = Math.cos(rad) * STEP_LENGTH;
+
+    userPosition.x += dx;
+    userPosition.y += dy;
+  }
+
+  AFRAME.registerComponent('arrow-lock', {
+    tick: function() {
+      const camera = this.el.sceneEl.camera.el.object3D;
+      const arrow = this.el.object3D;
+
+      const camPos = new THREE.Vector3();
+      camera.getWorldPosition(camPos);
+
+      const forward = new THREE.Vector3(0, 0, -1);
+      forward.applyQuaternion(camera.quaternion);
+
+      const ARROW_DISTANCE = 2.0;
+      const ARROW_HEIGHT_OFFSET = -0.4;
+
+      arrow.position.copy(camPos).add(forward.multiplyScalar(ARROW_DISTANCE));
+      arrow.position.y += ARROW_HEIGHT_OFFSET;
+
+      const arrowVec = new THREE.Vector3(
         destRel.x - userPosition.x,
         0,
         destRel.y - userPosition.y
       );
 
-      const bearingToDest = (Math.atan2(moveVec.z, moveVec.x) * 180 / Math.PI + 360) % 360;
-      const diff = ((bearingToDest - deviceHeading + 540) % 360) - 180;
-      const moveFactor = Math.cos(diff * Math.PI/180);
+      const angleY = Math.atan2(arrowVec.x, arrowVec.z);
+      arrow.rotation.set(0, -angleY, 0);
 
-      const stepVec = moveVec.clone().normalize().multiplyScalar(STEP_LENGTH * Math.abs(moveFactor));
+      const distance = arrowVec.length();
 
-      userPosition.x += stepVec.x;
-      userPosition.y += stepVec.z;
-      
-      // const moveFactor = Math.cos(diff*Math.PI/180) * 1.8;
+      let proximity = "Far";
+      if (distance < 2) proximity = "Close";
+      else if (distance < 5) proximity = "Near";
 
-      // if (moveFactor > 0) {
-      //   const stepVec = moveVec.clone().normalize().multiplyScalar(STEP_LENGTH * moveFactor);
-      //   userPosition.x += stepVec.x;
-      //   userPosition.y += stepVec.z;
-      // }
+      progressPrompt.textContent = `${proximity} (${distance.toFixed(1)}m)`;
+      arrivalPrompt.style.display = (distance < ARRIVAL_RADIUS) ? "block" : "none";
     }
+  });
 
-    AFRAME.registerComponent('arrow-lock', {
-      tick: function() {
+  function updateArrow() { requestAnimationFrame(updateArrow); }
+</script>
 
-        const camera = this.el.sceneEl.camera.el.object3D;
-        const arrow = this.el.object3D;
-
-        const camPos = new THREE.Vector3();
-        camera.getWorldPosition(camPos);
-
-        const forward = new THREE.Vector3(0, 0, -1);
-        forward.applyQuaternion(camera.quaternion);
-
-        const ARROW_DISTANCE = 2.0;
-        const ARROW_HEIGHT_OFFSET = -0.4;
-
-        arrow.position.copy(camPos).add(forward.multiplyScalar(ARROW_DISTANCE));
-        arrow.position.y += ARROW_HEIGHT_OFFSET;
-
-        const arrowVec = new THREE.Vector3(
-          destRel.x - userPosition.x,
-          0,
-          destRel.y - userPosition.y
-        );
-
-        const angleY = Math.atan2(arrowVec.x, arrowVec.z);
-        arrow.rotation.set(0, -angleY, 0);
-
-        const distance = arrowVec.length();
-
-        let proximity = "Far";
-        if (distance < 2) proximity = "Close";
-        else if (distance < 5) proximity = "Near";
-
-        progressPrompt.textContent = `${proximity} (${distance.toFixed(1)}m)`;
-        arrivalPrompt.style.display = (distance < ARRIVAL_RADIUS) ? "block" : "none";
-      }
-    });
-
-    function updateArrow() { requestAnimationFrame(updateArrow); }
-  </script>
 </body>
 </html>
