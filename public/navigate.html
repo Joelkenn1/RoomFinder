@@ -259,8 +259,11 @@
       const moveFactor = Math.cos(diff*Math.PI/180);
       const rad = deviceHeading*Math.PI/180;
 
-      userPosition.x += Math.cos(rad)*STEP_LENGTH*moveFactor;
-      userPosition.y += Math.sin(rad)*STEP_LENGTH*moveFactor;
+      // userPosition.x += Math.cos(rad)*STEP_LENGTH*moveFactor;
+      // userPosition.y += Math.sin(rad)*STEP_LENGTH*moveFactor;
+
+      userPosition.x += Math.sin(rad) * STEP_LENGTH;
+      userPosition.y += Math.cos(rad) * STEP_LENGTH;
     }
 
     /* ----------------- Arrow Component ----------------- */
