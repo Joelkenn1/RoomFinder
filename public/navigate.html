@@ -95,10 +95,8 @@
            loading-screen="enabled: false"
            device-orientation-permission-ui="enabled: false">
 
-    <!-- Camera -->
     <a-entity id="camera" camera look-controls="touchEnabled: false" magicWindowTrackingEnabled="true"></a-entity>
 
-    <!-- Arrow in the scene -->
     <a-entity id="arrow3d" arrow-lock>
       <a-entity id="arrowVisual"
           geometry="primitive: cone; radiusBottom: 0.15; height: 0.5"
@@ -111,21 +109,18 @@
   </a-scene>
 
   <script>
-    /* ----------------- Constants ----------------- */
     const ARRIVAL_RADIUS = 1.5;
     const STEP_LENGTH = 1.2;
     const STEP_THRESHOLD = 1.8;
     const STEP_COOLDOWN = 600;
     const bufferSize = 15;
 
-    /* ----------------- Elements ----------------- */
     const arrow3d = document.getElementById("arrow3d");
     const progressPrompt = document.getElementById("progressPrompt");
     const arrivalPrompt = document.getElementById("arrivalPrompt");
     const destinationPrompt = document.getElementById("destinationPrompt");
     const video = document.getElementById("cameraFeed");
 
-    /* ----------------- Maps ----------------- */
     const maps = {
       MainCampus: {
         InformationTechnologyBuilding: {
@@ -139,9 +134,7 @@
           "1204(Computer-Lab)": { x: 48.75, y: 22.5 },
           "1208(Advisement-Center)": { x: 75, y: 22.5 }, 
           "1217(IT-Services)": { x: 82.5, y: 29.25 }
-          
-        },
-      
+        }
       },
       ArmstrongCampus: {
         ScienceCenter: {
@@ -152,7 +145,6 @@
       }
     };
 
-    /* ----------------- URL Params ----------------- */
     function normalize(str) { return str?.trim(); }
 
     const params = new URLSearchParams(window.location.search);
@@ -172,30 +164,28 @@
       destinationPrompt.textContent = `Destination: ${destinationName}`;
     }
 
-    /* ----------------- State ----------------- */
     let accelBuffer = [];
     let lastStepTime = 0;
     let deviceHeading = 0;
     let userPosition = { ...startCoords };
 
-    /* ----------------- Motion Access ----------------- */
-    async function initCamera(){
-       try {
+    async function initCamera() {
+      try {
         const stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:"environment" } });
         video.srcObject = stream;
       } catch(e){ alert("Camera access failed: "+e.message); }
     }
 
-    async function enableMotion(){
+    async function enableMotion() {
       const overlay = document.getElementById("motionOverlay");
       const scene = document.getElementById("sceneRoot");
 
       try {
         if (typeof DeviceOrientationEvent?.requestPermission === "function") {
           const permission = await DeviceOrientationEvent.requestPermission();
-          if (permission !== "granted") { alert("Motion permission denied."); return; }
+          if (permission !== "granted") return;
         }
-      } catch(e) { alert("Motion permission error: "+e); return; }
+      } catch(e) { return; }
 
       overlay.style.display = "none";
       scene.setAttribute("visible", "true");
@@ -210,7 +200,6 @@
       requestAnimationFrame(updateArrow);
     }
 
-    /* ----------------- Orientation ----------------- */
     function handleOrientation(e) {
       if (e.webkitCompassHeading !== undefined) {
         deviceHeading = e.webkitCompassHeading;
@@ -221,7 +210,6 @@
       }
     }
 
-    /* ----------------- Motion (Step Detection) ----------------- */
     function handleMotion(e) {
       const acc = e.accelerationIncludingGravity;
       if (!acc) return;
@@ -234,66 +222,78 @@
       const now = Date.now();
       const baseline = accelBuffer.slice(0, bufferSize-3).reduce((a,b)=>a+b,0)/(bufferSize-3);
 
-      if((avg-baseline) > 0.5 && avg>STEP_THRESHOLD && now-lastStepTime>STEP_COOLDOWN){
+      if ((avg-baseline) > 0.5 && avg>STEP_THRESHOLD && now-lastStepTime>STEP_COOLDOWN) {
         lastStepTime = now;
         takeStep();
       }
     }
 
     function takeStep() {
-      const dx = destCoords.x - userPosition.x;
-      const dy = destCoords.y - userPosition.y;
-      const bearingToDest = (Math.atan2(dy, dx) * 180/Math.PI + 360)%360;
-      const diff = ((bearingToDest-deviceHeading+540)%360)-180;
-      const moveFactor = Math.cos(diff*Math.PI/180) * 1.8;
-      const rad = deviceHeading*Math.PI/180;
 
-      userPosition.x += Math.cos(rad)*STEP_LENGTH*moveFactor;
-      userPosition.y += Math.sin(rad)*STEP_LENGTH*moveFactor;
+      const moveVec = new THREE.Vector3(
+        destCoords.x - userPosition.x,
+        0,
+        destCoords.y - userPosition.y
+      );
 
+      const bearingToDest = (Math.atan2(moveVec.z, moveVec.x) * 180 / Math.PI + 360) % 360;
+      const diff = ((bearingToDest - deviceHeading + 540) % 360) - 180;
+
+      const moveFactor = Math.cos(diff * Math.PI / 180);
+
+      if (moveFactor > 0) {
+        const stepVec = moveVec.clone().normalize().multiplyScalar(STEP_LENGTH * moveFactor);
+
+        userPosition.x += stepVec.x;
+        userPosition.y += stepVec.z;
+      }
     }
 
-    /* ----------------- Arrow Component ----------------- */
     AFRAME.registerComponent('arrow-lock', {
-      tick: function () {
+      tick: function() {
+
         const camera = this.el.sceneEl.camera.el.object3D;
         const arrow = this.el.object3D;
 
-        // 1. Camera position
         const camPos = new THREE.Vector3();
         camera.getWorldPosition(camPos);
 
-        // 2. Place arrow in front of camera
         const forward = new THREE.Vector3(0, 0, -1);
         forward.applyQuaternion(camera.quaternion);
 
-        const ARROW_DISTANCE = 2.0; // move it farther away
-        const ARROW_HEIGHT_OFFSET = -0.4; // slightly lower
-        arrow.position.copy(camPos)
-                         .add(forward.multiplyScalar(ARROW_DISTANCE));
-        arrow.position.y += ARROW_HEIGHT_OFFSET; 
+        const ARROW_DISTANCE = 2.0;
+        const ARROW_HEIGHT_OFFSET = -0.4;
 
-        
-        // 3. Direction vector to destination
-        const destVec = new THREE.Vector3(destCoords.x - userPosition.x * 0.25, 0, destCoords.y - userPosition.y);
+        arrow.position.copy(camPos).add(forward.multiplyScalar(ARROW_DISTANCE));
+        arrow.position.y += ARROW_HEIGHT_OFFSET;
 
-        // 4. Compute Y rotation angle toward destination
-        const angleY = Math.atan2(destVec.x, destVec.z);
+        const arrowVec = new THREE.Vector3(
+          destCoords.x - userPosition.x * 0.25,
+          0,
+          destCoords.y - userPosition.y
+        );
 
-        // 5. Apply rotation
+        const angleY = Math.atan2(arrowVec.x, arrowVec.z);
         arrow.rotation.set(0, -angleY, 0);
 
-        // 6. Update UI
-        const distance = destVec.length();
+        const trueVec = new THREE.Vector3(
+          destCoords.x - userPosition.x,
+          0,
+          destCoords.y - userPosition.y
+        );
+
+        const distance = trueVec.length();
+
         let proximity = "Far";
-        if(distance<2) proximity="Close";
-        else if(distance<5) proximity="Near";
+        if (distance < 2) proximity = "Close";
+        else if (distance < 5) proximity = "Near";
+
         progressPrompt.textContent = `${proximity} (${distance.toFixed(1)}m)`;
-        arrivalPrompt.style.display = (distance<ARRIVAL_RADIUS) ? "block":"none";
+        arrivalPrompt.style.display = (distance < ARRIVAL_RADIUS) ? "block" : "none";
       }
     });
 
-    function updateArrow(){ requestAnimationFrame(updateArrow); }
+    function updateArrow() { requestAnimationFrame(updateArrow); }
   </script>
 </body>
 </html>
