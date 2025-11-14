@@ -292,8 +292,16 @@
                          .add(forward.multiplyScalar(ARROW_DISTANCE));
         arrow.position.y += ARROW_HEIGHT_OFFSET; 
 
+        // Weighting factors
+        const X_WEIGHT = 0.35;   // adjust this between 0.2–0.5 depending on hallway width
+        const Y_WEIGHT = 1.0;
+        
+        // Weighted direction
+        const weightedDx = destCoords.x  * X_WEIGHT;
+        const weightedDy = destCoords.y * Y_WEIGHT;
+        
         // 3. Direction vector to destination (map coords)
-        let destVec = new THREE.Vector3(destCoords.x - userPosition.x, 0, destCoords.y - userPosition.y);
+        let destVec = new THREE.Vector3(weightedDx - userPosition.x, 0, weightedDy - userPosition.y);
 
         // 4. Apply initial-orientation correction so arrow assumes user started facing forward
         if (worldCorrection) destVec.applyQuaternion(worldCorrection);
