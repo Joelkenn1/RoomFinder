@@ -113,9 +113,9 @@
   <script>
     /* ----------------- Constants ----------------- */
     const ARRIVAL_RADIUS = 1.5;
-    const STEP_LENGTH = 3;
-    const STEP_THRESHOLD = 1.5;
-    const STEP_COOLDOWN = 350;
+    const STEP_LENGTH = 1.2;
+    const STEP_THRESHOLD = 1.8;
+    const STEP_COOLDOWN = 600;
     const bufferSize = 15;
 
     /* ----------------- Elements ----------------- */
@@ -132,7 +132,7 @@
           "Entrance": { x: 0, y: 0 },
           "1005": { x: 22.5, y: 31.5 },
           "1004": { x: 15, y: 31.5 },
-          "1305/1303": { x: -27.5, y: 32.25 },
+          "1305/1303": { x: -27.75, y: 32.25 },
           "1101": { x: -30, y: 15 },
           "1104": { x: -27.75, y: 14.25 },
           "1110": { x: -27.75, y: 6.75 },
@@ -243,29 +243,15 @@
     function takeStep() {
       const dx = destCoords.x - userPosition.x;
       const dy = destCoords.y - userPosition.y;
-    
-      const distance = Math.sqrt(dx*dx + dy*dy);
-      if(distance < 0.01) return; // at destination
-    
-      // Unit vector toward destination
-      const dirX = dx / distance;
-      const dirY = dy / distance;
-    
-      // Heading in radians
-      const rad = deviceHeading * Math.PI / 180;
-    
-      // Step along user heading
-      const stepX = Math.cos(rad) * STEP_LENGTH;
-      const stepY = Math.sin(rad) * STEP_LENGTH;
-    
-      // Project step onto direction to destination
-      const dot = stepX * dirX + stepY * dirY; // scalar projection
-    
-      // Move along projected vector
-      userPosition.x += dirX * dot;
-      userPosition.y += dirY * dot;
-    }
+      const bearingToDest = (Math.atan2(dy, dx) * 180/Math.PI + 360)%360;
+      const diff = ((bearingToDest-deviceHeading+540)%360)-180;
+      const moveFactor = Math.cos(diff*Math.PI/180) * 1.8;
+      const rad = deviceHeading*Math.PI/180;
 
+      userPosition.x += Math.cos(rad)*STEP_LENGTH*moveFactor;
+      userPosition.y += Math.sin(rad)*STEP_LENGTH*moveFactor;
+
+    }
 
     /* ----------------- Arrow Component ----------------- */
     AFRAME.registerComponent('arrow-lock', {
