@@ -248,8 +248,8 @@
       // const moveFactor = Math.cos(diff*Math.PI/180) * 1.8;
       const rad = deviceHeading*Math.PI/180;
 
-      userPosition.x += Math.cos(rad)*STEP_LENGTH;
-      userPosition.y += Math.sin(rad)*STEP_LENGTH;
+      userPosition.x += Math.sin(rad)*STEP_LENGTH;
+      userPosition.y += Math.cos(rad)*STEP_LENGTH;
 
     }
 
