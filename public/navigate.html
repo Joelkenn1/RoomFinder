@@ -280,7 +280,7 @@
         const angleY = Math.atan2(destVec.z, destVec.x);
 
         // 5. Apply rotation
-        arrow.rotation.set(0, -angleY, 0);
+        arrow.rotation.set(0, angleY, 0);
 
         // 6. Update UI
         const distance = destVec.length();
