@@ -56,11 +56,10 @@
   <script>
     const roomMap = {
       MainCampus: {
-        EngineeringHall: ["Entrance", "Lobby", "Room101", "Room102", "Room201", "Room202"],
-        Library: ["Entrance", "Room301", "Room302"]
+        ITBuilding: ["Entrance", "1005", "1104", "1305/1303", "1101", "1104", "1110", "1204(Computer-Lab)", "1208(Advisement-Center)", "1217(IT-Services)"]
       },
       ArmstrongCampus: {
-        ScienceCenter: ["Entrance", "Room401", "Room402"]
+        ScienceCenter: ["Entrance", "1051", "2330"]
       }
     };
 
@@ -114,7 +113,7 @@
         return;
       }
 
-      const url = `navigate.html?campus=${campus}&building=${building}&start=${start}&dest=${dest}`;
+      const url = `navigate.html?campus=${campus}&building=${building}&start=${encodeURIComponent(start)}&dest=${encodeURIComponent(dest)}`;
       window.location.href = url;
     }
 
