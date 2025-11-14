@@ -77,7 +77,7 @@
           "1110": { x: 27.75, y: 6.75 },
           "1204(Computer-Lab)": { x: 48.75, y: 22.5 },
           "1208(Advisement-Center)": { x: 75, y: 22.5 }, 
-          "1217(IT-Services)": { x: 79.5, y: 35}
+          "1217(IT-Services)": { x: 85.5, y: 30}
         }
       },
       ArmstrongCampus: {
@@ -221,9 +221,9 @@
         arrow.position.y += ARROW_HEIGHT_OFFSET;
 
         const arrowVec = new THREE.Vector3(
-          destRel.x - userPosition.x * 1.25,
+          destRel.x - userPosition.x,
           0,
-          destRel.y - userPosition.y
+          -(destRel.y - userPosition.y)
         );
 
         const angleY = Math.atan2(arrowVec.x, arrowVec.z);
