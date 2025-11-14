@@ -163,10 +163,14 @@
       const cam = document.getElementById("camera").object3D;
       const forward = new THREE.Vector3(0,0,-1).applyQuaternion(cam.quaternion);
       if (worldCorrection) forward.applyQuaternion(worldCorrection);
-      forward.y = 0;
-      forward.normalize();
-      userPosition.x += forward.x * STEP_LENGTH;
-      userPosition.y += forward.z * STEP_LENGTH;
+     forward.y = 0;
+     forward.normalize();
+      
+     forward.z = -forward.z;
+      
+     userPosition.x += forward.x * STEP_LENGTH * 2.5;
+     userPosition.y += forward.z * STEP_LENGTH * 2.5;
+
     }
 
     AFRAME.registerComponent('arrow-lock', {
@@ -190,7 +194,7 @@
 
         const distance = Math.hypot(rawVec.x, rawVec.z);
 
-        let X_WEIGHT = 0.35;
+        let X_WEIGHT = 0.6;
         const Y_WEIGHT = 1.0;
         const ADAPTIVE = true;
         if (ADAPTIVE) {
