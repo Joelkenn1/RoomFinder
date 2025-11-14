@@ -113,7 +113,7 @@
     const STEP_LENGTH = 2.2;
     const STEP_THRESHOLD = 1;
     const STEP_COOLDOWN = 150;
-    const bufferSize = 7;
+    const bufferSize = 11;
 
     const arrow3d = document.getElementById("arrow3d");
     const progressPrompt = document.getElementById("progressPrompt");
@@ -239,7 +239,8 @@
       const bearingToDest = (Math.atan2(moveVec.z, moveVec.x) * 180 / Math.PI + 360) % 360;
       const diff = ((bearingToDest - deviceHeading + 540) % 360) - 180;
 
-      const moveFactor = Math.max(0.8,  Math.cos(diff));
+      // const moveFactor = Math.max(0.8,  Math.cos(diff));
+      const moveFactor = Math.cos(diff*Math.PI/180) * 1.8;
 
       if (moveFactor > 0) {
         const stepVec = moveVec.clone().normalize().multiplyScalar(STEP_LENGTH * moveFactor);
