@@ -114,7 +114,7 @@
     /* ----------------- Constants ----------------- */
     const ARRIVAL_RADIUS = 1.5;
     const STEP_LENGTH = 1.5;
-    const STEP_THRESHOLD = 1.8;
+    const STEP_THRESHOLD = 1.5;
     const STEP_COOLDOWN = 350;
     const bufferSize = 15;
 
@@ -245,7 +245,7 @@
       const dy = destCoords.y - userPosition.y;
       const bearingToDest = (Math.atan2(dy, dx) * 180/Math.PI + 360)%360;
       const diff = ((bearingToDest-deviceHeading+540)%360)-180;
-      const moveFactor = Math.cos(diff*Math.PI/180) * 1.8;
+      const moveFactor = Math.cos(diff*Math.PI/180) * 2;
       const rad = deviceHeading*Math.PI/180;
 
       userPosition.x += Math.cos(rad)*STEP_LENGTH * moveFactor;
