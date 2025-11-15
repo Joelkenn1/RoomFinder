@@ -167,7 +167,7 @@ function takeStep() {
   if (headingOffset === null) return; // wait for calibration
   const rad = ((deviceHeading - headingOffset) * Math.PI) / 180;
 
-  const dx = Math.sin(rad) * STEP_LENGTH; // positive X is right
+  const dx = -Math.sin(rad) * STEP_LENGTH; // positive X is right
   const dy = Math.cos(rad) * STEP_LENGTH; // positive Y is forward
   userPosition.x += dx;
   userPosition.y += dy;
