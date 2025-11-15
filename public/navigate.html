@@ -87,14 +87,14 @@ if (!startCoords || !destCoords || !entranceCoords) {
   destinationPrompt.textContent = `Destination: ${destinationName}`;
 }
 
-const startRel = { x: startCoords.x - entranceCoords.x, y: startCoords.y - entranceCoords.y };
-const destRel = { x: destCoords.x - entranceCoords.x, y: destCoords.y - entranceCoords.y };
+// const startRel = { x: startCoords.x - entranceCoords.x, y: startCoords.y - entranceCoords.y };
+// const destRel = { x: destCoords.x - entranceCoords.x, y: destCoords.y - entranceCoords.y };
 
 let accelBuffer = [];
 let lastStepTime = 0;
 let deviceHeading = 0;
 let headingOffset = null; // for auto-calibration
-let userPosition = { ...startRel };
+let userPosition = { ...startCoords };
 
 async function initCamera() {
   try {
@@ -197,7 +197,7 @@ AFRAME.registerComponent('arrow-lock', {
     );
 
     const angleY = Math.atan2(arrowVec.x, arrowVec.z);
-    arrow.rotation.set(0, -angleY, 0);
+    arrow.rotation.set(0, angleY, 0);
 
     const distance = arrowVec.length();
     let proximity = "Far";
