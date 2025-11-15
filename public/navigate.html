@@ -191,9 +191,9 @@ AFRAME.registerComponent('arrow-lock', {
     arrow.position.y += ARROW_HEIGHT_OFFSET;
 
     const arrowVec = new THREE.Vector3(
-      destRel.x - userPosition.x,
+      destCoords.x - userPosition.x,
       0,
-      destRel.y - userPosition.y
+      destCoords.y - userPosition.y
     );
 
     const angleY = Math.atan2(arrowVec.x, arrowVec.z);
