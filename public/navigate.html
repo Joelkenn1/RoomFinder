@@ -196,7 +196,7 @@ AFRAME.registerComponent('arrow-lock', {
       destRel.y - userPosition.y
     );
 
-    const angleY = Math.atan2(-arrowVec.x, arrowVec.z);
+    const angleY = Math.atan2(arrowVec.x, arrowVec.z);
     arrow.rotation.set(0, -angleY, 0);
 
     const distance = arrowVec.length();
