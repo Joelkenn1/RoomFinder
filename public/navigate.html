@@ -152,7 +152,7 @@
   function takeStep() {
     const rad = (deviceHeading * Math.PI) / 180;
 
-    const dx = Math.cos(rad) * STEP_LENGTH;
+    const dx = -Math.cos(rad) * STEP_LENGTH;
     const dy = Math.sin(rad) * STEP_LENGTH;
 
     userPosition.x += dx;
