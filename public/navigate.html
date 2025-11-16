@@ -1,41 +1,45 @@
-<html> 
-  <head> 
-    <title>AR Room Finder</title> 
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /> 
-    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script> 
-    <style> 
-      html, body { margin:0; padding:0; overflow:hidden; height:100%; width:100%; background:black; font-family:sans-serif; } 
-      video#cameraFeed { position:fixed; top:0; left:0; width:100vw; height:100vh; object-fit:cover; z-index:0; }
-      a-scene { position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:1; pointer-events:none; }
-      #motionOverlay { position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); display:flex; align-items:center; justify-content:center; z-index:10; }
-      #motionButton { font-size:2rem; padding:1rem 2rem; background:rgba(0,0,0,0.5); color:white; border:2px solid white; border-radius:8px; cursor:pointer; }
-      #destinationPrompt, #progressPrompt, #arrivalPrompt { position:absolute; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.6); color:white; padding:8px 16px; border-radius:6px; z-index:5; }
-      #destinationPrompt { top:3%; font-size:1.3rem; } 
-      #progressPrompt { top:18%; font-size:1.1rem; } 
-      #arrivalPrompt { display:none; bottom:10%; font-size:1.2rem; background:rgba(0,0,0,0.7); padding:10px 20px; border-radius:8px; } 
-    </style> 
-  </head> 
-  <body> 
-    <video id="cameraFeed" autoplay playsinline></video> 
-    <div id="motionOverlay"> 
-      <button id="motionButton" onclick="enableMotion()">Enable Motion</button>
-    </div>
-    <div id="destinationPrompt">Destination: Loading...</div> 
-    <div id="progressPrompt">Loading navigation...</div> 
-    <div id="arrivalPrompt">You've arrived!</div> 
-    <a-scene id="sceneRoot" embedded visible="false" renderer="antialias: true; alpha: true" vr-mode-ui="enabled: false" xr-mode-ui="enabled: false" loading-screen="enabled: false" device-orientation-permission-ui="enabled: false"> 
-      <a-entity id="camera" camera look-controls="touchEnabled: false" magicWindowTrackingEnabled="true"></a-entity> 
-      <a-entity id="arrow3d" arrow-lock> 
-        <a-entity id="arrowVisual" geometry="primitive: cone; radiusBottom: 0.15; height: 0.5" material="color:red" rotation="-105 0 0" animation="property: position; to: 0 -0.25 0; dir: alternate; dur: 1200; loop: true"></a-entity>
-      </a-entity> 
-    </a-scene>
+<html>
+<head>
+  <title>AR Room Finder</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <style>
+    html, body { margin:0; padding:0; overflow:hidden; height:100%; width:100%; background:black; font-family:sans-serif; }
+    video#cameraFeed { position:fixed; top:0; left:0; width:100vw; height:100vh; object-fit:cover; z-index:0; }
+    a-scene { position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:1; pointer-events:none; }
+    #motionOverlay { position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); display:flex; align-items:center; justify-content:center; z-index:10; }
+    #motionButton { font-size:2rem; padding:1rem 2rem; background:rgba(0,0,0,0.5); color:white; border:2px solid white; border-radius:8px; cursor:pointer; }
+    #destinationPrompt, #progressPrompt, #arrivalPrompt { position:absolute; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.6); color:white; padding:8px 16px; border-radius:6px; z-index:5; }
+    #destinationPrompt { top:3%; font-size:1.3rem; }
+    #progressPrompt { top:18%; font-size:1.1rem; }
+    #arrivalPrompt { display:none; bottom:10%; font-size:1.2rem; background:rgba(0,0,0,0.7); padding:10px 20px; border-radius:8px; }
+  </style>
+</head>
+<body>
+  <video id="cameraFeed" autoplay playsinline></video>
+  <div id="motionOverlay">
+    <button id="motionButton" onclick="enableMotion()">Enable Motion</button>
+  </div>
+  <div id="destinationPrompt">Destination: Loading...</div>
+  <div id="progressPrompt">Loading navigation...</div>
+  <div id="arrivalPrompt">You've arrived!</div>
+
+  <a-scene id="sceneRoot" embedded visible="false" renderer="antialias: true; alpha: true" vr-mode-ui="enabled: false" xr-mode-ui="enabled: false" loading-screen="enabled: false" device-orientation-permission-ui="enabled: false">
+    <a-entity id="camera" camera look-controls="touchEnabled: false" magicWindowTrackingEnabled="true"></a-entity>
+    <a-entity id="arrow3d" arrow-lock>
+      <a-entity id="arrowVisual" geometry="primitive: cone; radiusBottom: 0.15; height: 0.5" material="color:red" rotation="-105 0 0" animation="property: position; to: 0 -0.25 0; dir: alternate; dur: 1200; loop: true"></a-entity>
+    </a-entity>
+  </a-scene>
 
 <script>
+
 const ARRIVAL_RADIUS = 1.5;
-const STEP_LENGTH = 2;
+const NEAR_FIXATION_DISTANCE = 20.0;
+const STEP_LENGTH = 1.45;
 const STEP_THRESHOLD = 1;
 const STEP_COOLDOWN = 450;
 const bufferSize = 8;
+
 
 const arrow3d = document.getElementById("arrow3d");
 const progressPrompt = document.getElementById("progressPrompt");
@@ -43,173 +47,262 @@ const arrivalPrompt = document.getElementById("arrivalPrompt");
 const destinationPrompt = document.getElementById("destinationPrompt");
 const video = document.getElementById("cameraFeed");
 
+
 const maps = {
   MainCampus: {
     InformationTechnologyBuilding: {
       "Entrance": { x: 0, y: 0 },
       "1005": { x: -22.5, y: 31.5 },
       "1004": { x: -15, y: 31.5 },
-      "1305/1303": { x: 27.75, y: 32.25 },
+      "1305/1303": { x: 27.75, y: 40.25 }, 
       "1101": { x: 30, y: 15 },
       "1104": { x: 27.75, y: 14.25 },
       "1110": { x: 27.75, y: 6.75 },
       "1204(Computer-Lab)": { x: 48.75, y: 22.5 },
-      "1208(Advisement-Center)": { x: 75, y: 22.5 }, 
+      "1208(Advisement-Center)": { x: 75, y: 22.5 },
       "1217(IT-Services)": { x: 79.25, y: 25.25 }
-    }
-  },
-  ArmstrongCampus: {
-    ScienceCenter: {
-      "2330": { x: 15, y: 10 },
-      "1051": { x: 17, y: 12 },
-      "Entrance": { x: 0, y: 0 }
     }
   }
 };
 
-function normalize(str) { return str?.trim(); }
 
+function normalize(str){ return str?.trim(); }
 const params = new URLSearchParams(window.location.search);
 const campus = normalize(params.get("campus"));
 const building = normalize(params.get("building"));
-const startRoom = params.get("start");
-const destRoom = params.get("dest");
+const startRoom = normalize(params.get("start"));
+const destRoom = normalize(params.get("dest"));
 
 const buildingMap = maps?.[campus]?.[building];
-const entranceCoords = buildingMap?.["Entrance"];
-const startCoords = buildingMap?.[startRoom];
-const destCoords = buildingMap?.[destRoom];
-const destinationName = destRoom?.toUpperCase?.() || "Unknown";
+if(!buildingMap || !buildingMap[startRoom] || !buildingMap[destRoom]){
+  alert("Invalid campus, building, or room.");
+}
+destinationPrompt.textContent = `Destination: ${destRoom?.toUpperCase()||"Unknown"}`;
 
-if (!startCoords || !destCoords || !entranceCoords) {
-  alert("Invalid campus, building, or room selection.");
-} else {
-  destinationPrompt.textContent = `Destination: ${destinationName}`;
+
+const nodes = {};
+for(const [room, coords] of Object.entries(buildingMap)){
+  nodes[room] = { x: coords.x, y: coords.y, neighbors: [] };
+}
+nodes["Checkpoint"] = { x: 10, y: 30, neighbors: [] };
+
+
+nodes["Entrance"].neighbors = ["1004","1005","Checkpoint"];
+nodes["1004"].neighbors = ["Entrance","1005","1101"];
+nodes["1005"].neighbors = ["Entrance","1004","1101"];
+nodes["1305/1303"].neighbors = ["1101","1204(Computer-Lab)"];
+nodes["1101"].neighbors = ["1104","1305/1303","1204(Computer-Lab)", "Checkpoint"]; 
+nodes["1104"].neighbors = ["1101","1110"];
+nodes["1110"].neighbors = ["1104","1004"];
+nodes["1204(Computer-Lab)"].neighbors = ["1208(Advisement-Center)","1101"];
+nodes["1208(Advisement-Center)"].neighbors = ["1204(Computer-Lab)","1217(IT-Services)"];
+nodes["1217(IT-Services)"].neighbors = ["1208(Advisement-Center)","1204(Computer-Lab)"];
+nodes["Checkpoint"].neighbors = ["1101", "Entrance"];
+
+
+(function validateGraph(){
+  let problems = [];
+  for(const [name, node] of Object.entries(nodes)){
+    if(typeof node.x !== "number" || typeof node.y !== "number"){
+      problems.push(`Room "${name}" missing numeric coordinates (x/y).`);
+      console.error("Missing coords:", name, node);
+    }
+    for(const n of node.neighbors){
+      if(!nodes[n]){
+        problems.push(`Room "${name}" has neighbor "${n}" which does not exist.`);
+        console.error(`Broken neighbor: "${n}" referenced by "${name}"`);
+      }
+    }
+  }
+  if(problems.length){
+    const msg = `Map validation problems detected:\n- ${problems.join("\n- ")}\nCheck console for details.`;
+    console.warn(msg);
+    
+    alert(msg);
+  }
+})();
+
+
+function safeDistance(a, b){
+  if(!a || !b || typeof a.x !== "number" || typeof a.y !== "number" || typeof b.x !== "number" || typeof b.y !== "number"){
+    console.error("safeDistance received invalid coordinates:", a, b);
+    return Infinity;
+  }
+  const dx = a.x - b.x; const dy = a.y - b.y;
+  return Math.sqrt(dx*dx + dy*dy);
 }
 
-// const startRel = { x: startCoords.x - entranceCoords.x, y: startCoords.y - entranceCoords.y };
-// const destRel = { x: destCoords.x - entranceCoords.x, y: destCoords.y - entranceCoords.y };
+function findPath(start, goal){
+  if(!nodes[start] || !nodes[goal]) {
+    console.error("findPath start/goal invalid:", start, goal);
+    return [];
+  }
+  const queue=[[start]];
+  const visited=new Set();
+  while(queue.length>0){
+    const path = queue.shift();
+    const node = path[path.length-1];
+    if(node === goal) return path;
+    if(visited.has(node)) continue;
+    visited.add(node);
+    const neighs = nodes[node].neighbors || [];
+    for(const n of neighs){
+      if(!nodes[n]) {
 
-let accelBuffer = [];
-let lastStepTime = 0;
-let deviceHeading = 0;
-let headingOffset = null; // for auto-calibration
-let userPosition = { ...startCoords };
+        console.warn(`Skipping invalid neighbor "${n}" referenced by "${node}"`);
+        continue;
+      }
 
-async function initCamera() {
-  try {
+      if(path.includes(n)) continue;
+      queue.push([...path, n]);
+    }
+  }
+  return []; 
+}
+
+let path = findPath(startRoom, destRoom);
+if(!path || path.length === 0){
+  progressPrompt.textContent = "Error: no path found.";
+  console.error("No path found for", startRoom, "→", destRoom);
+} else {
+
+  var currentPathIndex = 1;
+  var userPosition = { ...nodes[startRoom] };
+  var accelBuffer = [];
+  var lastStepTime = 0;
+}
+
+async function initCamera(){
+  try{
     const stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:"environment" } });
     video.srcObject = stream;
-  } catch(e){ alert("Camera access failed: "+e.message); }
+  } catch(e){
+    alert("Camera access failed: "+e.message);
+  }
 }
 
-async function enableMotion() {
+async function enableMotion(){
   const overlay = document.getElementById("motionOverlay");
   const scene = document.getElementById("sceneRoot");
-
-  try {
-    if (typeof DeviceOrientationEvent?.requestPermission === "function") {
+  try{
+    if(typeof DeviceOrientationEvent?.requestPermission === "function"){
       const permission = await DeviceOrientationEvent.requestPermission();
-      if (permission !== "granted") return;
+      if(permission !== "granted") return;
     }
-  } catch(e) { return; }
+  } catch(e){ /* ignore */ }
 
   overlay.style.display = "none";
-  scene.setAttribute("visible", "true");
+  scene.setAttribute("visible","true");
   await initCamera();
   startMotionTracking();
 }
 
-function startMotionTracking() {
+function startMotionTracking(){
   window.addEventListener("devicemotion", handleMotion);
-  window.addEventListener("deviceorientation", handleOrientation);
-  window.addEventListener("deviceorientationabsolute", handleOrientation);
   requestAnimationFrame(updateArrow);
 }
 
-function handleOrientation(e) {
-  let heading;
-  if (e.webkitCompassHeading !== undefined) heading = e.webkitCompassHeading;
-  else if (e.absolute && e.alpha !== null) heading = 360 - e.alpha;
-  else if (e.alpha !== null) heading = 360 - e.alpha;
-
-  if (heading !== undefined) {
-    deviceHeading = heading;
-
-    // Auto-calibrate on first orientation event
-    if (headingOffset === null) {
-      headingOffset = deviceHeading;
-      console.log("Auto-calibration complete. Forward heading set.");
-    }
-  }
-}
-
-function handleMotion(e) {
+function handleMotion(e){
   const acc = e.accelerationIncludingGravity;
-  if (!acc) return;
-
-  const magnitude = Math.sqrt(acc.x**2 + acc.y**2 + acc.z**2);
+  if(!acc) return;
+  const magnitude = Math.sqrt(acc.x*acc.x + acc.y*acc.y + acc.z*acc.z);
   accelBuffer.push(magnitude);
-  if (accelBuffer.length > bufferSize) accelBuffer.shift();
-
+  if(accelBuffer.length>bufferSize) accelBuffer.shift();
   const avg = accelBuffer.reduce((a,b)=>a+b,0)/accelBuffer.length;
   const now = Date.now();
-  const baseline = accelBuffer.slice(0, bufferSize-3).reduce((a,b)=>a+b,0)/(bufferSize-3);
-
-  if ((avg-baseline) > 0.5 && avg>STEP_THRESHOLD && now-lastStepTime>STEP_COOLDOWN) {
+  const baseline = accelBuffer.slice(0, Math.max(1, bufferSize-3)).reduce((a,b)=>a+b,0)/Math.max(1, bufferSize-3);
+  if((avg-baseline)>0.5 && avg>STEP_THRESHOLD && now-lastStepTime>STEP_COOLDOWN){
     lastStepTime = now;
     takeStep();
   }
 }
 
-// Corrected step: distance decreases toward destination
-function takeStep() {
-  if (headingOffset === null) return; // wait for calibration
-  const rad = ((deviceHeading - headingOffset) * Math.PI) / 180;
 
-  const dx = Math.sin(rad) * STEP_LENGTH; // positive X is right
-  const dy = Math.cos(rad) * STEP_LENGTH; // positive Y is forward
-  userPosition.x += dx;
-  userPosition.y += dy;
+function takeStep(){
+  if(!path || path.length === 0) return;
+  if(currentPathIndex >= path.length) return;
+  const targetKey = path[currentPathIndex];
+  const targetNode = nodes[targetKey];
+  if(!targetNode){
+    console.error("takeStep targetNode missing:", targetKey);
+    return;
+  }
+  const dx = targetNode.x - userPosition.x;
+  const dy = targetNode.y - userPosition.y;
+  const dist = Math.sqrt(dx*dx + dy*dy);
+  if(!isFinite(dist) || dist === 0){
+  
+    userPosition.x = targetNode.x; userPosition.y = targetNode.y;
+    currentPathIndex++;
+    return;
+  }
+  if(dist <= STEP_LENGTH){
+    userPosition.x = targetNode.x; userPosition.y = targetNode.y;
+    currentPathIndex++;
+  } else {
+    const stepRatio = STEP_LENGTH / dist;
+    userPosition.x += dx * stepRatio;
+    userPosition.y += dy * stepRatio;
+  }
 }
 
-AFRAME.registerComponent('arrow-lock', {
-  tick: function() {
-    const camera = this.el.sceneEl.camera.el.object3D;
+AFRAME.registerComponent('arrow-lock',{
+  tick: function(){
+    if(!path || path.length === 0){
+      // nothing to point to
+      return;
+    }
+    if(!this.el.sceneEl || !this.el.sceneEl.camera) return;
+    const cameraObj = this.el.sceneEl.camera.el.object3D;
     const arrow = this.el.object3D;
 
+
     const camPos = new THREE.Vector3();
-    camera.getWorldPosition(camPos);
-
-    const forward = new THREE.Vector3(0, 0, -1);
-    forward.applyQuaternion(camera.quaternion);
-
+    cameraObj.getWorldPosition(camPos);
+    const forward = new THREE.Vector3(0,0,-1).applyQuaternion(cameraObj.quaternion);
     const ARROW_DISTANCE = 2.0;
     const ARROW_HEIGHT_OFFSET = -0.4;
-
     arrow.position.copy(camPos).add(forward.multiplyScalar(ARROW_DISTANCE));
     arrow.position.y += ARROW_HEIGHT_OFFSET;
 
-    const arrowVec = new THREE.Vector3(
-      destCoords.x - userPosition.x,
-      0,
-      destCoords.y - userPosition.y
-    );
+    const destNode = nodes[path[path.length - 1]];
+    const distToDest = safeDistance(destNode, userPosition);
 
-    const angleY = Math.atan2(arrowVec.x, arrowVec.z);
-    arrow.rotation.set(0, -angleY, 0);
+    
+    let target = null;
+    if(distToDest < NEAR_FIXATION_DISTANCE || currentPathIndex >= path.length){
+      target = destNode;
+    } else {
+      const nextKey = path[currentPathIndex];
+      const nextNode = nodes[nextKey];
+      if(nextNode) target = nextNode;
+      else target = destNode; // fallback
+    }
 
-    const distance = arrowVec.length();
-    let proximity = "Far";
-    if (distance < 2) proximity = "Close";
-    else if (distance < 5) proximity = "Near";
+    if(target && isFinite(target.x) && isFinite(target.y)){
+      const arrowVec = new THREE.Vector3(target.x - userPosition.x, 0, target.y - userPosition.y);
+      if(arrowVec.lengthSq() > 1e-8){
+        const angleY = Math.atan2(arrowVec.x, arrowVec.z);
+        const targetQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, -angleY, 0));
+        arrow.quaternion.slerp(targetQuat, 0.12);
+      }
+    }
 
-    progressPrompt.textContent = `${proximity} (${distance.toFixed(1)}m)`;
-    arrivalPrompt.style.display = (distance < ARRIVAL_RADIUS) ? "block" : "none";
+    
+    if(!destNode || !isFinite(destNode.x) || !isFinite(destNode.y)){
+      progressPrompt.textContent = "Error: invalid destination coords";
+    } else {
+      let proximity = "Far";
+      if(distToDest < 2) proximity = "Close";
+      else if(distToDest < 5) proximity = "Near";
+      progressPrompt.textContent = `${proximity} (${isFinite(distToDest) ? distToDest.toFixed(1) : "?"}m)`;
+      arrivalPrompt.style.display = (distToDest < ARRIVAL_RADIUS) ? "block" : "none";
+    }
   }
 });
 
-function updateArrow() { requestAnimationFrame(updateArrow); }
+
+function updateArrow(){ requestAnimationFrame(updateArrow); }
 </script>
-</body> 
+</body>
 </html>
