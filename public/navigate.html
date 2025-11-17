@@ -300,13 +300,15 @@ AFRAME.registerComponent('arrow-lock',{
 
 
     const camForward = new THREE.Vector3(0,0,-1).applyQuaternion(cameraObj.quaternion).normalize();
+    const arrowForward = new THREE.Vector3(0,0,-1).applyQuaternion(arrow.quaternion).normalize();
+    
     const dirToTarget = new THREE.Vector3(
       (target?.x ?? 0) - userPosition.x,
       0,
       (target?.y ?? 0) - userPosition.y
     ).normalize();
 
-    const dot = camForward.dot(dirToTarget);
+    const dot = camForward.dot(arrowForward);
     let displayDistance = distToDest;
 
     if(!destNode || !isFinite(destNode.x) || !isFinite(destNode.y)){
