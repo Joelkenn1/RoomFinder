@@ -306,7 +306,7 @@ AFRAME.registerComponent('arrow-lock',{
     const dot = camForward.dot(dirToTarget);
 
     let displayDistance = distToDest;
-    if (dot < 0) {
+    while(dot < 0) {
       displayDistance += 0.25;
     }
 
