@@ -313,9 +313,10 @@ AFRAME.registerComponent('arrow-lock',{
       progressPrompt.textContent = "Error: Invalid Destination Coords";
     } else {
       let proximity = "Far";
-      if(dot < 0) proximity = "Turn Around";
-      else if(displayDistance < 6) proximity = "Close";
+      if(displayDistance < 6) proximity = "Close";
       else if(displayDistance < 10) proximity = "Near";
+      
+      if(dot < 0) proximity = "Turn Around";
       
       progressPrompt.textContent = `${proximity} (${displayDistance.toFixed(1)}m)`;
       arrivalPrompt.style.display = (displayDistance < ARRIVAL_RADIUS) ? "block" : "none";
