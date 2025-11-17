@@ -307,6 +307,7 @@ AFRAME.registerComponent('arrow-lock',{
     ).normalize();
 
     const dot = camForward.dot(dirToTarget);
+    let displayDistance = distToDest;
 
     if(!destNode || !isFinite(destNode.x) || !isFinite(destNode.y)){
       progressPrompt.textContent = "Error: Invalid Destination Coords";
