@@ -310,7 +310,7 @@ AFRAME.registerComponent('arrow-lock',{
 
     let displayDistance = distToDest;
     if(dot < 0) {
-      displayDistance += 0.25;
+      progressPrompt.textContent = `Turn Around.`; 
     }
 
     if(!destNode || !isFinite(destNode.x) || !isFinite(destNode.y)){
