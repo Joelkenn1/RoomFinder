@@ -98,7 +98,7 @@ for(const [room, coords] of Object.entries(buildingMap)){
 }
 nodes["Checkpoint"] = { x: 4, y: 18, neighbors: [] };
 nodes["Checkpoint2"] = { x: 20, y: 18, neighbors: [] };
-nodes["Return"] = { x: -10, y: 18, neighbors: [] };
+nodes["Return"] = { x: -10, y: 25, neighbors: [] };
 
 nodes["Entrance"].neighbors = ["Checkpoint","1005", "1004"];
 nodes["1004"].neighbors = ["1005","Checkpoint","Entrance"];
