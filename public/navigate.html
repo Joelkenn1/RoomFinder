@@ -36,13 +36,11 @@
 function checkMotionCompatibility() {
   const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-  // 1. Must be mobile
   if (!isMobile) {
     alert("This device does not support motion tracking. Please use a mobile device.");
     return false;
   }
 
-  // 2. Check if the browser even exposes motion APIs
   if (typeof DeviceMotionEvent === "undefined") {
     alert("Motion sensors are not supported on this device.");
     return false;
@@ -58,13 +56,11 @@ const STEP_THRESHOLD = 1;
 const STEP_COOLDOWN = 450;
 const bufferSize = 8;
 
-
 const arrow3d = document.getElementById("arrow3d");
 const progressPrompt = document.getElementById("progressPrompt");
 const arrivalPrompt = document.getElementById("arrivalPrompt");
 const destinationPrompt = document.getElementById("destinationPrompt");
 const video = document.getElementById("cameraFeed");
-
 
 const maps = {
   MainCampus: {
@@ -83,7 +79,6 @@ const maps = {
   }
 };
 
-
 function normalize(str){ return str?.trim(); }
 const params = new URLSearchParams(window.location.search);
 const campus = normalize(params.get("campus"));
@@ -96,7 +91,6 @@ if(!buildingMap || !buildingMap[startRoom] || !buildingMap[destRoom]){
   alert("Invalid campus, building, or room.");
 }
 destinationPrompt.textContent = `Destination: ${destRoom?.toUpperCase()||"Unknown"}`;
-
 
 const nodes = {};
 for(const [room, coords] of Object.entries(buildingMap)){
@@ -118,7 +112,6 @@ nodes["1217(IT-Services)"].neighbors = ["1208(Advisement-Center)","1204(Computer
 nodes["Checkpoint2"].neighbors = ["1101", "1305/1303", "Checkpoint"] 
 nodes["Checkpoint"].neighbors = ["Entrance", "1004", "Checkpoint2"];
 
-
 (function validateGraph(){
   let problems = [];
   for(const [name, node] of Object.entries(nodes)){
@@ -136,11 +129,9 @@ nodes["Checkpoint"].neighbors = ["Entrance", "1004", "Checkpoint2"];
   if(problems.length){
     const msg = `Map validation problems detected:\n- ${problems.join("\n- ")}\nCheck console for details.`;
     console.warn(msg);
-    
     alert(msg);
   }
 })();
-
 
 function safeDistance(a, b){
   if(!a || !b || typeof a.x !== "number" || typeof a.y !== "number" || typeof b.x !== "number" || typeof b.y !== "number"){
@@ -167,11 +158,9 @@ function findPath(start, goal){
     const neighs = nodes[node].neighbors || [];
     for(const n of neighs){
       if(!nodes[n]) {
-
         console.warn(`Skipping Invalid Neighbor "${n}" Referenced By "${node}"`);
         continue;
       }
-
       if(path.includes(n)) continue;
       queue.push([...path, n]);
     }
@@ -184,7 +173,6 @@ if(!path || path.length === 0){
   progressPrompt.textContent = "Error: No Path Found.";
   console.error("No Path Found For", startRoom, "→", destRoom);
 } else {
-
   var currentPathIndex = 1;
   var userPosition = { ...nodes[startRoom] };
   var accelBuffer = [];
@@ -201,7 +189,6 @@ async function initCamera(){
 }
 
 async function enableMotion(){
-  
   if (!checkMotionCompatibility()) return;
   
   const overlay = document.getElementById("motionOverlay");
@@ -218,7 +205,6 @@ async function enableMotion(){
 
   overlay.style.display = "none";
   scene.setAttribute("visible","true");
-  cnsole.warn("Please Stand Exactly At Your Starting Location Facing Outward.")
   await initCamera();
   startMotionTracking();
 }
@@ -243,7 +229,6 @@ function handleMotion(e){
   }
 }
 
-
 function takeStep(){
   if(!path || path.length === 0) return;
   if(currentPathIndex >= path.length) return;
@@ -257,7 +242,6 @@ function takeStep(){
   const dy = targetNode.y - userPosition.y;
   const dist = Math.sqrt(dx*dx + dy*dy);
   if(!isFinite(dist) || dist === 0){
-  
     userPosition.x = targetNode.x; userPosition.y = targetNode.y;
     currentPathIndex++;
     return;
@@ -274,14 +258,11 @@ function takeStep(){
 
 AFRAME.registerComponent('arrow-lock',{
   tick: function(){
-    if(!path || path.length === 0){
-      // nothing to point to
-      return;
-    }
+    if(!path || path.length === 0) return;
     if(!this.el.sceneEl || !this.el.sceneEl.camera) return;
+
     const cameraObj = this.el.sceneEl.camera.el.object3D;
     const arrow = this.el.object3D;
-
 
     const camPos = new THREE.Vector3();
     cameraObj.getWorldPosition(camPos);
@@ -294,7 +275,6 @@ AFRAME.registerComponent('arrow-lock',{
     const destNode = nodes[path[path.length - 1]];
     const distToDest = safeDistance(destNode, userPosition);
 
-    
     let target = null;
     if(distToDest < NEAR_FIXATION_DISTANCE || currentPathIndex >= path.length){
       target = destNode;
@@ -302,7 +282,7 @@ AFRAME.registerComponent('arrow-lock',{
       const nextKey = path[currentPathIndex];
       const nextNode = nodes[nextKey];
       if(nextNode) target = nextNode;
-      else target = destNode; // fallback
+      else target = destNode;
     }
 
     if(target && isFinite(target.x) && isFinite(target.y)){
@@ -314,19 +294,33 @@ AFRAME.registerComponent('arrow-lock',{
       }
     }
 
-    
+
+    const camForward = new THREE.Vector3(0,0,-1).applyQuaternion(cameraObj.quaternion).normalize();
+    const dirToTarget = new THREE.Vector3(
+      (target?.x ?? 0) - userPosition.x,
+      0,
+      (target?.y ?? 0) - userPosition.y
+    ).normalize();
+
+    const dot = camForward.dot(dirToTarget);
+
+    let displayDistance = distToDest;
+    if (dot < 0) {
+      displayDistance += 0.25;
+    }
+
     if(!destNode || !isFinite(destNode.x) || !isFinite(destNode.y)){
       progressPrompt.textContent = "Error: Invalid Destination Coords";
     } else {
       let proximity = "Far";
-      if(distToDest < 6) proximity = "Close";
-      else if(distToDest < 10) proximity = "Near";
-      progressPrompt.textContent = `${proximity} (${isFinite(distToDest) ? distToDest.toFixed(1) : "?"}m)`;
-      arrivalPrompt.style.display = (distToDest < ARRIVAL_RADIUS) ? "block" : "none";
+      if(displayDistance < 6) proximity = "Close";
+      else if(displayDistance < 10) proximity = "Near";
+      
+      progressPrompt.textContent = `${proximity} (${displayDistance.toFixed(1)}m)`;
+      arrivalPrompt.style.display = (displayDistance < ARRIVAL_RADIUS) ? "block" : "none";
     }
   }
 });
-
 
 function updateArrow(){ requestAnimationFrame(updateArrow); }
 </script>
