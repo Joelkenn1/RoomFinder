@@ -88,8 +88,8 @@ nodes["Checkpoint"] = { x: 10, y: 30, neighbors: [] };
 
 
 nodes["Entrance"].neighbors = ["1004","1005","Checkpoint"];
-nodes["1004"].neighbors = ["Entrance","1005","1101"];
-nodes["1005"].neighbors = ["Entrance","1004","1101"];
+nodes["1004"].neighbors = ["Entrance","1005","1204(Computer-Lab)"];
+nodes["1005"].neighbors = ["Entrance","1004","1204(Computer-Lab)"];
 nodes["1305/1303"].neighbors = ["1101","1204(Computer-Lab)"];
 nodes["1101"].neighbors = ["1104","1305/1303","1204(Computer-Lab)", "Checkpoint"]; 
 nodes["1104"].neighbors = ["1101","1110"];
@@ -97,7 +97,7 @@ nodes["1110"].neighbors = ["1104","1004"];
 nodes["1204(Computer-Lab)"].neighbors = ["1208(Advisement-Center)","1101"];
 nodes["1208(Advisement-Center)"].neighbors = ["1204(Computer-Lab)","1217(IT-Services)"];
 nodes["1217(IT-Services)"].neighbors = ["1208(Advisement-Center)","1204(Computer-Lab)"];
-nodes["Checkpoint"].neighbors = ["1101", "Entrance"];
+nodes["Checkpoint"].neighbors = ["1204(Computer-Lab)", "Entrance"];
 
 
 (function validateGraph(){
