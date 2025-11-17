@@ -32,8 +32,26 @@
   </a-scene>
 
 <script>
+  
+function checkMotionCompatibility() {
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-const ARRIVAL_RADIUS = 1.5;
+  // 1. Must be mobile
+  if (!isMobile) {
+    alert("This device does not support motion tracking. Please use a mobile device.");
+    return false;
+  }
+
+  // 2. Check if the browser even exposes motion APIs
+  if (typeof DeviceMotionEvent === "undefined") {
+    alert("Motion sensors are not supported on this device.");
+    return false;
+  }
+
+  return true;
+}
+
+const ARRIVAL_RADIUS = 5;
 const NEAR_FIXATION_DISTANCE = 20.0;
 const STEP_LENGTH = 0.9;
 const STEP_THRESHOLD = 1;
@@ -150,7 +168,7 @@ function findPath(start, goal){
     for(const n of neighs){
       if(!nodes[n]) {
 
-        console.warn(`Skipping invalid neighbor "${n}" referenced by "${node}"`);
+        console.warn(`Skipping Invalid Neighbor "${n}" Referenced By "${node}"`);
         continue;
       }
 
@@ -163,8 +181,8 @@ function findPath(start, goal){
 
 let path = findPath(startRoom, destRoom);
 if(!path || path.length === 0){
-  progressPrompt.textContent = "Error: no path found.";
-  console.error("No path found for", startRoom, "→", destRoom);
+  progressPrompt.textContent = "Error: No Path Found.";
+  console.error("No Path Found For", startRoom, "→", destRoom);
 } else {
 
   var currentPathIndex = 1;
@@ -178,11 +196,14 @@ async function initCamera(){
     const stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:"environment" } });
     video.srcObject = stream;
   } catch(e){
-    alert("Camera access failed: "+e.message);
+    alert("Camera Access Failed: "+e.message);
   }
 }
 
 async function enableMotion(){
+  
+  if (!checkMotionCompatibility()) return;
+  
   const overlay = document.getElementById("motionOverlay");
   const scene = document.getElementById("sceneRoot");
   try{
@@ -190,10 +211,14 @@ async function enableMotion(){
       const permission = await DeviceOrientationEvent.requestPermission();
       if(permission !== "granted") return;
     }
-  } catch(e){ /* ignore */ }
+  } catch(e){
+    alert("Motion tracking is not supported on this device."); 
+    return;
+  }
 
   overlay.style.display = "none";
   scene.setAttribute("visible","true");
+  cnsole.warn("Please Stand Exactly At Your Starting Location Facing Outward.")
   await initCamera();
   startMotionTracking();
 }
@@ -291,11 +316,11 @@ AFRAME.registerComponent('arrow-lock',{
 
     
     if(!destNode || !isFinite(destNode.x) || !isFinite(destNode.y)){
-      progressPrompt.textContent = "Error: invalid destination coords";
+      progressPrompt.textContent = "Error: Invalid Destination Coords";
     } else {
       let proximity = "Far";
-      if(distToDest < 2) proximity = "Close";
-      else if(distToDest < 5) proximity = "Near";
+      if(distToDest < 6) proximity = "Close";
+      else if(distToDest < 10) proximity = "Near";
       progressPrompt.textContent = `${proximity} (${isFinite(distToDest) ? distToDest.toFixed(1) : "?"}m)`;
       arrivalPrompt.style.display = (distToDest < ARRIVAL_RADIUS) ? "block" : "none";
     }
