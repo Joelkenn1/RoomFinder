@@ -308,16 +308,12 @@ AFRAME.registerComponent('arrow-lock',{
 
     const dot = camForward.dot(dirToTarget);
 
-    let displayDistance = distToDest;
-    if(dot < 0) {
-      progressPrompt.textContent = `Turn Around.`; 
-    }
-
     if(!destNode || !isFinite(destNode.x) || !isFinite(destNode.y)){
       progressPrompt.textContent = "Error: Invalid Destination Coords";
     } else {
       let proximity = "Far";
-      if(displayDistance < 6) proximity = "Close";
+      if(dot < 0) proximity = "Turn Around";
+      else if(displayDistance < 6) proximity = "Close";
       else if(displayDistance < 10) proximity = "Near";
       
       progressPrompt.textContent = `${proximity} (${displayDistance.toFixed(1)}m)`;
