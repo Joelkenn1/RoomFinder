@@ -98,7 +98,7 @@ for(const [room, coords] of Object.entries(buildingMap)){
 }
 nodes["Checkpoint"] = { x: 4, y: 18, neighbors: [] };
 nodes["Checkpoint2"] = { x: 20, y: 18, neighbors: [] };
-nodes["Return"] = { x: -10, y: 25, neighbors: [] };
+nodes["Return"] = { x: -15, y: 25, neighbors: [] };
 
 nodes["Entrance"].neighbors = ["Checkpoint","1005", "1004"];
 nodes["1004"].neighbors = ["1005","Checkpoint","Entrance"];
@@ -112,7 +112,7 @@ nodes["1208(Advisement-Center)"].neighbors = ["1204(Computer-Lab)","1217(IT-Serv
 nodes["1217(IT-Services)"].neighbors = ["1208(Advisement-Center)","1204(Computer-Lab)"];
 nodes["Checkpoint2"].neighbors = ["1101", "1305/1303", "Checkpoint"] 
 nodes["Checkpoint"].neighbors = ["Entrance", "1004", "Checkpoint2"];
-nodes["Return"].neighbors = ["1004", "1005", "Checkpoint"];  
+nodes["Return"].neighbors = ["1004", "1005", "Checkpoint2"];  
   
 
 (function validateGraph(){
