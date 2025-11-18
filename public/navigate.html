@@ -101,7 +101,7 @@ nodes["Checkpoint2"] = { x: 20, y: 21, neighbors: [] };
 nodes["Return"] = { x: -15, y: 21, neighbors: [] };
 
 nodes["Entrance"].neighbors = ["Checkpoint","1005", "1004"];
-nodes["1004"].neighbors = ["1005","Return" "Entrance"];
+nodes["1004"].neighbors = ["1005","Return", "Entrance"];
 nodes["1005"].neighbors = ["1004","Checkpoint2", "Entrance"];
 nodes["1305/1303"].neighbors = ["1101","1204(Computer-Lab)","Checkpoint2"];
 nodes["1101"].neighbors = ["1104","1305/1303","1204(Computer-Lab)", "Checkpoint2"]; 
