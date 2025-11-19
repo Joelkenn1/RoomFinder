@@ -110,8 +110,8 @@ nodes["1110"].neighbors = ["1104"];
 nodes["1204(Computer-Lab)"].neighbors = ["1208(Advisement-Center)","1101"];
 nodes["1208(Advisement-Center)"].neighbors = ["1204(Computer-Lab)","1217(IT-Services)"];
 nodes["1217(IT-Services)"].neighbors = ["1208(Advisement-Center)","1204(Computer-Lab)"];
-nodes["Checkpoint2"].neighbors = ["Checkpoint", "1101", "1305/1303"] 
-nodes["Checkpoint"].neighbors = ["Entrance", "1004", "Checkpoint2"];
+nodes["Checkpoint2"].neighbors = ["Checkpoint"] 
+nodes["Checkpoint"].neighbors = ["Entrance", "Checkpoint2", "1004"];
 nodes["Return"].neighbors = ["Checkpoint"];  
   
 
@@ -294,7 +294,7 @@ AFRAME.registerComponent('arrow-lock',{
       if(arrowVec.lengthSq() > 1e-8){
         const angleY = Math.atan2(arrowVec.x, arrowVec.z);
         const targetQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, -angleY, 0));
-        arrow.quaternion.slerp(targetQuat, 0.05);
+        arrow.quaternion.slerp(targetQuat, 0.08);
       }
     }
 
