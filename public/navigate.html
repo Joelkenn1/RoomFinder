@@ -50,7 +50,7 @@ function checkMotionCompatibility() {
 }
 
 const ARRIVAL_RADIUS = 5;
-const NEAR_FIXATION_DISTANCE = 30.0;
+const NEAR_FIXATION_DISTANCE = 20.0;
 const STEP_LENGTH = 1;
 const STEP_THRESHOLD = 1;
 const STEP_COOLDOWN = 450;
@@ -102,7 +102,7 @@ nodes["Return"] = { x: -15, y: 21, neighbors: [] };
 
 nodes["Entrance"].neighbors = ["Checkpoint","1005", "1004"];
 nodes["1004"].neighbors = ["1005","Return", "Entrance"];
-nodes["1005"].neighbors = ["1004","Checkpoint2", "Entrance"];
+nodes["1005"].neighbors = ["1004","Checkpoint", "Entrance"];
 nodes["1305/1303"].neighbors = ["1101","1204(Computer-Lab)","Checkpoint2"];
 nodes["1101"].neighbors = ["Checkpoint2", "1104","1204(Computer-Lab)", "1305/1303"]; 
 nodes["1104"].neighbors = ["1101","1110"];
@@ -294,7 +294,7 @@ AFRAME.registerComponent('arrow-lock',{
       if(arrowVec.lengthSq() > 1e-8){
         const angleY = Math.atan2(arrowVec.x, arrowVec.z);
         const targetQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, -angleY, 0));
-        arrow.quaternion.slerp(targetQuat, 0.12);
+        arrow.quaternion.slerp(targetQuat, 0.05);
       }
     }
 
