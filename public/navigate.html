@@ -268,6 +268,10 @@ AFRAME.registerComponent('arrow-lock',{
     const cameraObj = this.el.sceneEl.camera.el.object3D;
     const arrow = this.el.object3D;
 
+    if (startRoom === "1305/1303" || startRoom === "1110") {
+    arrow.rotation.y += Math.PI; // rotate 180 degrees
+}
+
     const camPos = new THREE.Vector3();
     cameraObj.getWorldPosition(camPos);
     const forward = new THREE.Vector3(0,0,-1).applyQuaternion(cameraObj.quaternion);
@@ -294,7 +298,7 @@ AFRAME.registerComponent('arrow-lock',{
       if(arrowVec.lengthSq() > 1e-8){
         const angleY = Math.atan2(arrowVec.x, arrowVec.z);
         const targetQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, -angleY, 0));
-        arrow.quaternion.slerp(targetQuat, 0.08);
+        arrow.quaternion.slerp(targetQuat, 0.15);
       }
     }
 
