@@ -297,6 +297,7 @@ AFRAME.registerComponent('arrow-lock',{
 
         if(startRoom === "1305/1303" || startRoom === "1217(IT-Services)"){
            const targetQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, angleY, 0));
+           arrow.quaternion.slerp(targetQuat, 0.15);
         }
         else{
            const targetQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, -angleY, 0));
