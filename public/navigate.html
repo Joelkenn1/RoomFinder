@@ -211,6 +211,10 @@ async function enableMotion(){
   await initCamera();
   alert("Please Stand Exactly At Your Starting Location Facing Outward.")
 
+  if(startRoom === "Entrance" || destRoom === "Entrance"){
+      nodes["Checkpoint"].y -= 4;
+  }
+  
   startMotionTracking();
 }
 
