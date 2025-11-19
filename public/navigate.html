@@ -210,6 +210,10 @@ async function enableMotion(){
   scene.setAttribute("visible","true");
   await initCamera();
   alert("Please Stand Exactly At Your Starting Location Facing Outward.")
+
+  if (startRoom === "1305/1303" || startRoom === "1110") {
+    arrow3d.rotation.y += Math.PI; // rotate 180 degrees
+}
   startMotionTracking();
 }
 
@@ -267,10 +271,6 @@ AFRAME.registerComponent('arrow-lock',{
 
     const cameraObj = this.el.sceneEl.camera.el.object3D;
     const arrow = this.el.object3D;
-
-    if (startRoom === "1305/1303" || startRoom === "1110") {
-    arrow.rotation.y += Math.PI; // rotate 180 degrees
-}
 
     const camPos = new THREE.Vector3();
     cameraObj.getWorldPosition(camPos);
