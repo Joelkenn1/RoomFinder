@@ -106,11 +106,11 @@ nodes["1005"].neighbors = ["1004","Checkpoint", "Entrance"];
 nodes["1305/1303"].neighbors = ["1101","1204(Computer-Lab)","Checkpoint2"];
 nodes["1101"].neighbors = ["Checkpoint2", "1104","1204(Computer-Lab)", "1305/1303"]; 
 nodes["1104"].neighbors = ["1101","1110"];
-nodes["1110"].neighbors = ["1104"];
+nodes["1110"].neighbors = ["Checkpoint2"];
 nodes["1204(Computer-Lab)"].neighbors = ["1208(Advisement-Center)","1101"];
 nodes["1208(Advisement-Center)"].neighbors = ["1204(Computer-Lab)","1217(IT-Services)"];
 nodes["1217(IT-Services)"].neighbors = ["1208(Advisement-Center)","1204(Computer-Lab)"];
-nodes["Checkpoint2"].neighbors = ["Checkpoint", "1101"] 
+nodes["Checkpoint2"].neighbors = ["Checkpoint", "1101", "1204(Computer-Lab)"] 
 nodes["Checkpoint"].neighbors = ["Entrance", "Checkpoint2", "1004"];
 nodes["Return"].neighbors = ["Checkpoint"];  
   
@@ -211,9 +211,14 @@ async function enableMotion(){
   await initCamera();
   alert("Please Stand Exactly At Your Starting Location Facing Outward.")
 
-  if (startRoom === "1305/1303" || startRoom === "1110") {
-    arrow3d.object3D.rotation.y = THREE.MathUtils.degToRad(180);
-}
+  if(startRoom === "1305/1310"){
+     startRoom.y -= 30; 
+  }
+
+  if(startRoom === "1208(Advisement-Center)"){
+     startRoom.x -= 10; 
+  }
+
   startMotionTracking();
 }
 
