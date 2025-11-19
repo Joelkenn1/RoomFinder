@@ -69,9 +69,9 @@ const maps = {
       "1005": { x: -22.5, y: 30 },
       "1004": { x: -15, y: 30 },
       "1305/1303": { x: 25, y: 36 }, 
-      "1101": { x: 34.5, y: 22.5 },
-      "1104": { x: 34.5, y: 6.5 },
-      "1110": { x: 34.5, y: 2.5},
+      "1101": { x: 25, y: 22.5 },
+      "1104": { x: 25, y: 6.5 },
+      "1110": { x: 25, y: 2.5},
       "1204(Computer-Lab)": { x: 48.75, y: 22.5 },
       "1208(Advisement-Center)": { x: 75, y: 22.5 },
       "1217(IT-Services)": { x: 79.25, y: 25.25 }
@@ -210,7 +210,12 @@ async function enableMotion(){
   scene.setAttribute("visible","true");
   await initCamera();
   alert("Please Stand Exactly At Your Starting Location Facing Outward.")
-  
+
+  if(startRoom === "1004" || startRoom === "1005"){
+      buildingMap["1101"].x += 10;
+      buildingMap["1104"].x += 10;
+      buildingMap["1105"].x += 10;
+  }
   startMotionTracking();
 }
 
