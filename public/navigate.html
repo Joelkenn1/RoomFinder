@@ -50,8 +50,8 @@ function checkMotionCompatibility() {
 }
 
 const ARRIVAL_RADIUS = 5;
-const NEAR_FIXATION_DISTANCE = 20.0;
-const STEP_LENGTH = 0.9;
+const NEAR_FIXATION_DISTANCE = 30.0;
+const STEP_LENGTH = 1;
 const STEP_THRESHOLD = 1;
 const STEP_COOLDOWN = 450;
 const bufferSize = 8;
@@ -110,9 +110,9 @@ nodes["1110"].neighbors = ["1104"];
 nodes["1204(Computer-Lab)"].neighbors = ["1208(Advisement-Center)","1101"];
 nodes["1208(Advisement-Center)"].neighbors = ["1204(Computer-Lab)","1217(IT-Services)"];
 nodes["1217(IT-Services)"].neighbors = ["1208(Advisement-Center)","1204(Computer-Lab)"];
-nodes["Checkpoint2"].neighbors = ["1101", "1305/1303", "Checkpoint"] 
+nodes["Checkpoint2"].neighbors = ["Checkpoint", "1101", "1305/1303"] 
 nodes["Checkpoint"].neighbors = ["Entrance", "1004", "Checkpoint2"];
-nodes["Return"].neighbors = ["Checkpoint2"];  
+nodes["Return"].neighbors = ["Checkpoint"];  
   
 
 (function validateGraph(){
@@ -319,6 +319,7 @@ AFRAME.registerComponent('arrow-lock',{
       else if(displayDistance < 10) proximity = "Near";
       
       if(dot < 0) proximity = "Turn Around";
+      
       
       progressPrompt.textContent = `${proximity} (${displayDistance.toFixed(1)}m)`;
       arrivalPrompt.style.display = (displayDistance < ARRIVAL_RADIUS) ? "block" : "none";
