@@ -72,7 +72,7 @@ const maps = {
       "1101": { x: 25, y: 22.5 },
       "1104": { x: 25, y: 6.5 },
       "1110": { x: 25, y: 5},
-      "1204(Computer-Lab)": { x: 48.75, y: 22.5 },
+      "1204(Computer-Lab)": { x: 48.5, y: 22.5 },
       "1208(Advisement-Center)": { x: 75, y: 22.5 },
       "1217(IT-Services)": { x: 79.25, y: 25.25 }
     }
@@ -110,7 +110,7 @@ nodes["1110"].neighbors = ["Checkpoint2", "1101"];
 nodes["1204(Computer-Lab)"].neighbors = ["1208(Advisement-Center)","1101"];
 nodes["1208(Advisement-Center)"].neighbors = ["1204(Computer-Lab)","1217(IT-Services)"];
 nodes["1217(IT-Services)"].neighbors = ["1208(Advisement-Center)","1204(Computer-Lab)"];
-nodes["Checkpoint2"].neighbors = ["Checkpoint", "1101", "1204(Computer-Lab)"] 
+nodes["Checkpoint2"].neighbors = ["Checkpoint", "1101", "1208(Advisement-Center)"] 
 nodes["Checkpoint"].neighbors = ["Entrance", "Checkpoint2", "1004"];
 nodes["Return"].neighbors = ["Checkpoint"];  
   
