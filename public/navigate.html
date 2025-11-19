@@ -295,8 +295,8 @@ AFRAME.registerComponent('arrow-lock',{
       if(arrowVec.lengthSq() > 1e-8){
         const angleY = Math.atan2(arrowVec.x, arrowVec.z);
 
-        if(startRoom === "1305/1303" || startRoom === "1208(Advisment Center)"){
-           const targetQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, -angleY + 180, 0));
+        if(startRoom === "1305/1303" || startRoom === "1217(IT-Services)"){
+           const targetQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, angleY, 0));
         }
         else{
            const targetQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, -angleY, 0));
