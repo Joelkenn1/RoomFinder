@@ -212,7 +212,7 @@ async function enableMotion(){
   alert("Please Stand Exactly At Your Starting Location Facing Outward.")
 
   if (startRoom === "1305/1303" || startRoom === "1110") {
-    arrow3d.object3Drotation.y = THREE.MathUtils.degToRad(180);
+    arrow3d.object3D.rotation.y = THREE.MathUtils.degToRad(180);
 }
   startMotionTracking();
 }
