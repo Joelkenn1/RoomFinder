@@ -216,6 +216,10 @@ async function enableMotion(){
       buildingMap["1104"].x += 10;
       buildingMap["1110"].x += 10;
   }
+
+  if(startRoom === "1110"){
+    buildingMap["1110"].y += 8;
+  }
   startMotionTracking();
 }
 
