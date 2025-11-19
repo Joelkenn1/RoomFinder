@@ -212,11 +212,12 @@ async function enableMotion(){
   alert("Please Stand Exactly At Your Starting Location Facing Outward.")
 
   if(startRoom === "1305/1303"){
-     startRoom.y -= 30; 
+     startRoom.y = 6;
+     
   }
 
-  else if(startRoom === "1208(Advisement-Center)"){
-     startRoom.x -= 10; 
+  else if(startRoom === "1217(IT-Services)"){
+     startRoom.x = 65; 
   }
 
   startMotionTracking();
